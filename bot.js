@@ -1,0 +1,45 @@
+const Discord = require("discord.js");
+const client = new Discord.Client();
+const config = require("./config.json");
+const fs = require("fs");
+
+const prefix = "m.";
+
+class GameData {
+    constructor() {
+        this.players = new Map();
+    };
+}
+
+let gamedata = new GameData();
+
+client.once("ready", () => {
+    console.log("Ready!");
+});
+
+client.login(config.token);
+
+client.commands = new Discord.Collection();
+
+const commandFiles = fs.readdirSync("./commands").filter(file => file.endsWith(".js"));
+
+for (const file of commandFiles) {
+    const command = require(`./commands/${file}`);
+    client.commands.set(command.name, command);
+}
+
+client.on("message", (message) => {
+    if (!message.content.startsWith(prefix) || message.author.bot) {
+        return;
+    }
+    if (message.content.startsWith(prefix)) {
+        let args = message.content.substring(prefix.length).trim().split(/ +/);
+        let command = args.shift().toLowerCase();
+        try {
+            client.commands.get(command).execute(message, args, gamedata);
+        } catch (error) {
+            console.error(error);
+            message.channel.send("There was an error. The command didn't work.");
+        }
+    }
+});
