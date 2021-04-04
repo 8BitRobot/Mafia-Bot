@@ -1,0 +1,22 @@
+module.exports = {
+    name: "remove",
+    description: "",
+    execute(message, args, gamedata) {
+        let userid = args[0].replace("<@!", "").replace(">", "");
+        console.log(gamedata.players.get(message.author.tag))
+        if (!gamedata.players.get(message.author.tag).isHost && message.author.tag !== "PiAreSquared#6784" && message.author.tag !== "8BitRobot#3625") {
+            message.channel.send(`**${message.author.tag}** does not have the perms to remove someone from the party.`)
+        } else if (!gamedata.userids.has(userid)) {
+            message.channel.send(`**${messahe.cleanContent.split(/ +/)[0].substr(1)}** is not a valid user to remove.`)
+            return
+        }
+        else if (message.author.username === gamedata.userids.get(userid).slice(0, -5)) {
+            message.channel.send("Please use `m.leave` to remove yourself from the party.")
+        } else if (!gamedata.players.delete(gamedata.userids.get(userid))) {
+            message.channel.send(`**${gamedata.userids,get(userid)}** is not in the party.`);
+        } else {
+            message.channel.send(`**${gamedata.userids.get(userid)}** has been removed from the party.`);
+            gamedata.userids.delete(userid);
+        }
+    },
+};

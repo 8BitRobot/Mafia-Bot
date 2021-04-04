@@ -8,6 +8,72 @@ const prefix = "m.";
 class GameData {
     constructor() {
         this.players = new Map();
+        this.userids = new Map();
+        this.settings = new Map();
+        this.gameActive = false
+        this.mafiaRoles = [
+            {
+                name: "Godfather",
+                align: "Mafia",
+                night: function (player) {}
+            },
+            {
+                name: "Framer",
+                align: "Mafia",
+                night: function (player) {},
+            },
+            {
+                name: "Silencer",
+                align: "Mafia",
+                night: function (player) {},
+            },
+            {
+                name: "Mafioso",
+                align: "Mafia",
+                night: function (player) {}
+            }
+        ]
+
+        this.villageRoles = [
+            {
+                name: "Doctor",
+                align: "Village",
+                night: function (player) {},
+            },
+            {
+                name: "Detective",
+                align: "Village",
+                night: function (player) {}
+            },
+            {
+                name: "Vigilante",
+                align: "Village",
+                night: function (player) {}
+            },
+            {
+                name: "Mayor",
+                align: "Village",
+                night: function (player) {},
+            },
+        ];      
+        
+        this.neutralRoles = [
+            {
+                name: "Executioner",
+                align: "Neutral",
+                night: function (player) {}
+            },
+            {
+                name: "Jester",
+                align: "Neutral",
+                night: function (player) {}
+            },
+            {
+                name: "Eternal",
+                align: "Neutral",
+                night: function (player) {}
+            }
+        ]
     };
 }
 
