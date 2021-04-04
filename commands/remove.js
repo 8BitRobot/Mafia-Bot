@@ -5,7 +5,7 @@ module.exports = {
         let userid = args[0].replace("<@!", "").replace(">", "");
         console.log(gamedata.players.get(message.author.tag))
         if (!gamedata.players.get(message.author.tag).isHost && message.author.tag !== "PiAreSquared#6784" && message.author.tag !== "8BitRobot#3625") {
-            message.channel.send(`**${message.author.tag}** does not have the perms to remove someone from the party.`)
+            message.channel.send(`**${message.author.tag}** does not have the permissions to remove someone from the party.`)
         } else if (!gamedata.userids.has(userid)) {
             message.channel.send(`**${messahe.cleanContent.split(/ +/)[0].substr(1)}** is not a valid user to remove.`)
             return

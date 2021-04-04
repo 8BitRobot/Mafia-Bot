@@ -11,69 +11,133 @@ class GameData {
         this.userids = new Map();
         this.settings = new Map();
         this.gameActive = false
-        this.mafiaRoles = [
-            {
-                name: "Godfather",
+        // this.mafiaTiers = {
+        //     "Mafia": [
+        //         ["Godfather"],
+        //         ["Framer"],
+        //         ["Silencer", "Mafioso"]
+        //     ],
+        //     "Village": [
+        //         ["Doctor"],
+        //         ["Detective"],
+        //         ["Mayor", "Vigilante"],
+                
+        //     ],
+        //     "Neutral": [
+        //         [],
+        //     ]
+        // }
+        this.mafiaRoles = {
+            "Godfather": {
+                description: "",
+                tier: 1,
                 align: "Mafia",
+                // image: "/images"
                 night: function (player) {}
             },
-            {
-                name: "Framer",
+            "Framer": {
                 align: "Mafia",
+                tier: 2,
+                description: "",
                 night: function (player) {},
             },
-            {
-                name: "Silencer",
+            "Silencer": {
                 align: "Mafia",
+                tier: 3,
+                description: "",
                 night: function (player) {},
             },
-            {
-                name: "Mafioso",
+            "Mafioso": {
                 align: "Mafia",
+                tier: 3,
+                description: "",
                 night: function (player) {}
             }
-        ]
+        }
 
-        this.villageRoles = [
-            {
-                name: "Doctor",
+        this.villageRoles = {
+            "Doctor": {
                 align: "Village",
+                tier: 1,
+                description: "",
                 night: function (player) {},
             },
-            {
-                name: "Detective",
+            "Detective": {
                 align: "Village",
-                night: function (player) {}
-            },
-            {
-                name: "Vigilante",
-                align: "Village",
-                night: function (player) {}
-            },
-            {
-                name: "Mayor",
-                align: "Village",
+                tier: 2,
+                description: "",
                 night: function (player) {},
             },
-        ];      
+            "Vigilante": {
+                align: "Village",
+                tier: 3,
+                description: "",
+                night: function (player) {},
+            },
+            "Mayor": {
+                align: "Village",
+                tier: 3,
+                description: "",
+                night: function (player) {},
+            },
+            "PI": {
+                align: "Village",
+                tier: 4,
+                description: "",
+                night: function (player) {},
+            },
+            "Jailer": {
+                align: "Village",
+                tier: 4,
+                description: "",
+                night: function (player) {},
+            },
+            "Distractor": {
+                align: "Village",
+                tier: 4,
+                description: "",
+                night: function (player) {},
+            },
+            "Spy": {
+                align: "Village",
+                tier: 5,
+                description: "",
+                night: function (player) {},
+            },
+        };
         
-        this.neutralRoles = [
-            {
-                name: "Executioner",
+        this.neutralRoles = {
+            "Executioner": {
                 align: "Neutral",
+                tier: 1,
+                description: "",
                 night: function (player) {}
             },
-            {
-                name: "Jester",
+            "Jester": {
                 align: "Neutral",
+                tier: 1,
+                description: "",
                 night: function (player) {}
             },
-            {
-                name: "Eternal",
+            "Eternal": {
                 align: "Neutral",
+                tier: 2,
+                description: "",
+                night: function (player) {}
+            },
+            "Baiter": {
+                align: "Neutral",
+                tier: 2,
+                description: "",
+                night: function (player) {}
+            },
+            "Bomber": {
+                align: "Neutral",
+                tier: 2,
+                description: "",
                 night: function (player) {}
             }
-        ]
+        }
     };
 }
 
