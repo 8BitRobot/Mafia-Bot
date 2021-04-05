@@ -12,6 +12,7 @@ module.exports = {
                 id: message.author.id,
                 username: message.author.username,
                 role: undefined,
+                wasFramed: false,
                 align: undefined,
                 isAlive: true,
                 isHost: gamedata.players.size === 0,

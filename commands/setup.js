@@ -6,10 +6,12 @@ module.exports = {
     async execute(message, args, gamedata) {
 
         function createVillage() {
-            if (gamedata.players.size <= 4) {
+            if (gamedata.players.size < 4) { // TODO: increase to 5
                 message.channel.send("You don't have enough people!");
                 return;
             }
+
+            // Determine number of players in each group
 
             let mafiaCount, neutralCount;
             if (gamedata.settings.get("mafiaHidden") && gamedata.players.size >= 10 || gamedata.players.size >= 13) {
@@ -18,7 +20,7 @@ module.exports = {
                 if (gamedata.players.size <= 11) {
                     neutralCount--;
                 }
-            } else if (gamedata.settings.get("mafiaHidden") && gamedata.players.size >= 6 || gamedata.players.size >= 6) {
+            } else if (gamedata.settings.get("mafiaHidden") && gamedata.players.size >= 6 || gamedata.players.size >= 8) {
                 mafiaCount = 2
                 neutralCount = Math.round(Math.random());
                 if (gamedata.players.size > 7) {
@@ -31,11 +33,15 @@ module.exports = {
 
             let villagerCount = gamedata.players.size - mafiaCount - neutralCount;
 
+
+            // Randomly assign each player to a role
+
             let playersList = Array.from(gamedata.players.keys());
-            console.log(playersList);
+            gamedata.game.game.playersAlive = playersList;
+
+            // Mafia assignments
 
             let assignedMafiaRoles = [];
-            // let tier2MafiaRoles = ["Mafioso", "Silencer"];
             let tierMafiaRoles = {};
             for (const [key, role] of Object.entries(gamedata.mafiaRoles)) {
                 if (!(role.tier in tierMafiaRoles)) tierMafiaRoles[role.tier] = [key];
@@ -68,12 +74,9 @@ module.exports = {
                 gamedata.players.set(randPlayer, player);
             }
 
-            console.log(gamedata.players);
+            // Village Assignments
 
             let assignedVillageRoles = [];
-            // let tier2VillageRoles = ["Mayor", "Vigilante"];
-            // let tier3VillageRoles = ["PI", "Jailer", "Distractor"]
-            // let tier4VillageRoles = ["Spy"];
             let tierVillageRoles = {};
             for (const [key, role] of Object.entries(gamedata.villageRoles)) {
                 if (!(role.tier in tierVillageRoles)) tierVillageRoles[role.tier] = [key];
@@ -124,9 +127,9 @@ module.exports = {
                 gamedata.players.set(randPlayer, player);
             }
 
+            // Neutral Assignments
+
             let assignedNeutralRoles = [];
-            // let tier1NeutralRoles = ["Jester", "Executioner"];
-            // let tier2NeutralRoles = ["Eternal", "Baiter", "Bomber"]
             let tierNeutralRoles = {};
             for (const [key, role] of Object.entries(gamedata.neutralRoles)) {
                 if (!(role.tier in tierNeutralRoles)) tierNeutralRoles[role.tier] = [key];
@@ -156,58 +159,70 @@ module.exports = {
                 gamedata.players.set(randPlayer, player);
             }
 
-            message.guild.channels.create("Town Hall", {
-                type: 'voice'
-            }).then((id) => {
-                gamedata.settings.set("townHall", id.id)
-            }).then(() => {
-                message.guild.channels.create("Godfather's Lair", {
+            // Create Town Hall, Godfather's Lair, and people's individual homes, and set proper permissions for each room
+            message.guild.channels.create("Town of Larkinville", {
+                type: 'category',
+            }).then((category) => {
+                message.guild.channels.create("Town Hall", {
                     type: 'voice',
-                    permissionOverwrites: [{
-                        id: message.guild.roles.everyone,
-                        deny: ['VIEW_CHANNEL'],
-                    }],
-                }).then((id) => {
-                    gamedata.settings.set("mafiaHouse", id.id)
+                    parent: category,
+                }).then(async (id) => {
+                    // await message.guild.channels.resolve(id).setParent(category);
+                    gamedata.settings.set("townHall", id.id)
                 }).then(() => {
-                    return new Promise(async (resolve) => {
-                        for (const [tag, player] of gamedata.players) {
-                            await message.guild.members.fetch(player.id).then((user) => {
-                                user.send(player.roleMessage);
-                            })
-                            console.log(player.username, player.role);
-                            if (player.align !== "Mafia" || gamedata.settings.get("mafiaHidden")) {
-                                message.guild.channels.create(player.role === "Mayor" ? "Mayor's Residence" : player.username + "'s Home", {
-                                    type: 'voice', // hi
-                                    permissionOverwrites: [{
-                                            id: message.guild.roles.everyone,
-                                            deny: ['VIEW_CHANNEL'],
-                                        },
-                                        {
-                                            id: player.id,
-                                            allow: ['VIEW_CHANNEL'],
-                                        },
-                                    ],
-                                }).then((id) => {
-                                    let temp = gamedata.players.get(tag);
-                                    temp.vc = id.id;
-                                    gamedata.players.set(tag, temp);
+                    message.guild.channels.create("Godfather's Lair", {
+                        type: 'voice',
+                        parent: category,
+                        permissionOverwrites: [{
+                            id: message.guild.roles.everyone,
+                            deny: ['VIEW_CHANNEL'],
+                        }],
+                    }).then(async (id) => {
+                        // await message.guild.channels.resolve(id).setParent(category);
+                        gamedata.settings.set("mafiaHouse", id.id)
+                    }).then(() => {
+                        return new Promise(async (resolve) => {
+                            for (const [tag, player] of gamedata.players) {
+                                await message.guild.members.fetch(player.id).then((user) => {
+                                    user.send(player.roleMessage);
                                 })
-                            } else {
-                                let user = await message.guild.members.fetch(player.id);
-                                message.guild.channels.resolve(gamedata.settings.get("mafiaHouse")).updateOverwrite(user, {
-                                    VIEW_CHANNEL: true
-                                }).then((id) => {
-                                    let temp = gamedata.players.get(tag);
-                                    temp.vc = id.id;
-                                    gamedata.players.set(tag, temp);
-                                });
+                                if (player.align !== "Mafia" || gamedata.settings.get("mafiaHidden")) {
+                                    message.guild.channels.create(player.role === "Mayor" ? "Mayor's Residence" : player.username + "'s Home", {
+                                        type: 'voice',
+                                        parent: category,
+                                        permissionOverwrites: [{
+                                                id: message.guild.roles.everyone,
+                                                deny: ['VIEW_CHANNEL'],
+                                            },
+                                            {
+                                                id: player.id,
+                                                allow: ['VIEW_CHANNEL'],
+                                            },
+                                        ],
+                                    }).then(async (id) => {
+                                        // await message.guild.channels.resolve(id).setParent(category);
+                                        let temp = gamedata.players.get(tag);
+                                        temp.vc = id.id;
+                                        gamedata.players.set(tag, temp);
+                                    })
+                                } else {
+                                    let user = await message.guild.members.fetch(player.id);
+                                    message.guild.channels.resolve(gamedata.settings.get("mafiaHouse")).updateOverwrite(user, {
+                                        VIEW_CHANNEL: true
+                                    }).then((id) => {
+                                        let temp = gamedata.players.get(tag);
+                                        temp.vc = id.id;
+                                        gamedata.players.set(tag, temp);
+                                    });
+                                }
                             }
-                        }
+                        })
                     })
-                })
+                });
             });
+            
         }
         createVillage();
+        gamedata.gameActive = true;
     },
 };
