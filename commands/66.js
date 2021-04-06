@@ -1,11 +1,20 @@
 module.exports = {
     name: "66",
     description: "",
-    execute(message, args, gamedata) {
-        message.guild.channels.resolve(gamedata.settings.get("townHall")).delete().catch(() => {});
-        message.guild.channels.resolve(gamedata.settings.get("mafiaHouse")).delete().catch(() => {});
-        for (let [player, obj] of gamedata.players) {
-            message.guild.channels.resolve(obj.vc).delete().catch(() => {});
+    async execute(message, args, gamedata) {
+        let category;
+        let arrayOfCategories = [];
+        let categories = message.guild.channels.cache.filter(channel => channel.name === "Town of Larkinville");
+        for (category of categories) {
+            arrayOfCategories.push(category[0]);
+        }
+        for (let [_, channel] of message.guild.channels.cache) {
+            if (arrayOfCategories.includes(channel.parentID)) {
+                await channel.delete();
+            }
+        }
+        for (category of categories) {
+            message.guild.channels.resolve(category[0]).delete();
         }
         gamedata.players.clear();
         message.channel.send("Done.");

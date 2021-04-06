@@ -3,7 +3,6 @@ module.exports = {
     name: "setmode",
     description: "",
     execute(message, args, gamedata) {
-        console.log(args);
         gamedata.settings.set("gamemode", args[0]);
         let joinEmbed = new Discord.MessageEmbed()
             .setColor("#2196F3")

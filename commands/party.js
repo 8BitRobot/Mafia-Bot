@@ -8,8 +8,6 @@ module.exports = {
         let playerCount = gamedata.players.size;
         
         for (const [tag, obj] of gamedata.players) {
-            console.log(tag);
-            console.log(obj);
             playerList +=`\n- **${obj.username}**`
             if (obj.isHost) {
                 playerList += " (Host)";

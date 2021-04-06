@@ -13,6 +13,7 @@ module.exports = {
                 username: message.author.username,
                 role: undefined,
                 wasFramed: false,
+                wasSilenced: false,
                 align: undefined,
                 isAlive: true,
                 isHost: gamedata.players.size === 0,
@@ -21,7 +22,7 @@ module.exports = {
             gamedata.userids.set(message.author.id, message.author.tag)
             let joinEmbed = new Discord.MessageEmbed()
                 .setColor("#2196F3")
-                .setTitle(`**${message.author.username}** has joined the game.`)
+                .setTitle(`${message.author.username} has joined the game.`)
                 .setThumbnail(message.author.displayAvatarURL())
                 .setDescription(`Party count: \`${gamedata.players.size}\``)
                 .setFooter("Use m.party to see who joined!");

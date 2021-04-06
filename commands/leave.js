@@ -4,6 +4,9 @@ module.exports = {
     execute(message, args, gamedata) {
         let dev = ["PiAreSquared#6784", "8BitRobot#3625"]
         let isHost = gamedata.players.get(message.author.tag).isHost;
+        if (gamedata.gameActive) {
+            message.channel.send("Leaving in-game is not allowed, please run this command after the current game has finished.")
+        }
         if (!gamedata.players.delete(message.author.tag)) {
             message.channel.send(`**${message.author.username}** is not in the party.`);
         } else {
