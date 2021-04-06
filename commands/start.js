@@ -37,8 +37,16 @@ module.exports = {
             return new Promise((resolve) => {
                 let nominateMsg = new Discord.MessageEmbed()
                     .setColor("#cccccc")
-                    .setTitle("Time to discuss! Talk to your fellow villagers about the recent events.")
-                    .setDescription("And once you're done, you have the option of nominating any suspicious villagers for a ritual execution.");
+                    // .attachFiles([
+                    //     "images/1seconds.png",
+                    //     "images/2seconds.png",
+                    //     "images/3seconds.png",
+                    //     "images/10seconds.png",
+                    //     "images/20seconds.png",
+                    // ])
+                    // .setTitle("Time to discuss! Talk to your fellow villagers about the recent events.")
+                    .setDescription(`And once you're done, you have the option of nominating any suspicious villagers for a ritual execution.`)
+                    .setAuthor(`You have ${gamedata.settings.get("dayTime")} seconds total to discuss and vote!`);
                 let emojiMap = new Map();
                 let i = 0;
                 for (let player of gamedata.game.game.playersAlive) {
@@ -46,19 +54,44 @@ module.exports = {
                     nominateMsg.addField(`${gamedata.emojiArray[i]} ${player}`, "\u200B", false);
                     i++;
                 }
-                nominateMsg.setFooter("Use the emojis below to vote on whom to nominate!");
+                nominateMsg.setFooter(`Use the emojis below to vote on whom to nominate! (You need ${Math.ceil(gamedata.game.game.playersAlive.length / 2.4)} votes to nominate someone)`);
                 channel.send(nominateMsg).then(async (prompt) => {
+                    let i = gamedata.settings.get("dayTime") - 1;
+                    
+                    let countdown = setInterval(async () => {
+                        i--;
+                    }, 1000);
+                    
+                    let reactions = [];
                     for (let emoji of emojiMap.keys()) {
-                        prompt.react(emoji);
+                        reactions.push(new Promise((resolve) => {
+                            prompt.react(emoji).then(() => {
+                                resolve();
+                            });
+                        }));
                     }
+                    
+                    Promise.all(reactions).then(async()=> {
+                        clearInterval(countdown);
+                        countdown = setInterval(() => {
+                            if (i <= 3 || i === 10 || i === 20) {
+                                nominateMsg.setAuthor(`You have ${i} second${i !== 1 ? "s": ""} left to vote!`);
+                                // nominateMsg.setThumbnail(`attachment://${i}seconds.png`)
+                                if (i <= 3) nominateMsg.setColor(i % 2 === 1 ? "#d50000" : "#1e8c00");
+                                prompt.edit(nominateMsg);
+                            }
+                            i--;
+                        }, 1000);
+                    })
                     let promptFilter = (reaction, tuser) => {
-                        return Array.from(emojiMap.keys()).includes(reaction.emoji.name) && tuser.id !== "827754470825787413"
-                            && gamedata.players.get(gamedata.userids.get(tuser.id)).isAlive &&
+                        return Array.from(emojiMap.keys()).includes(reaction.emoji.name) && tuser.id !== "827754470825787413" && gamedata.userids.get(tuser.id) &&
+                            gamedata.players.get(gamedata.userids.get(tuser.id)).isAlive &&
                             !gamedata.players.get(gamedata.userids.get(tuser.id)).wasSilenced;
                     };
                     prompt.awaitReactions(promptFilter, {
                         time: gamedata.settings.get("dayTime") * 1000,
                     }).then(async (emojis) => {
+                        clearInterval(countdown)
                         emojis = emojis.filter(t => t.count > 1)
                         let reactions = {};
                         let maxCount = 0;
@@ -71,8 +104,8 @@ module.exports = {
                                 currentReaction.push(emojiMap.get(emoji));
                             }
                         }
-                        if (currentReaction.length !== 1 || (maxCount - 1) <= gamedata.game.game.playersAlive.length * 0.33) {
-                            channel.send("vote was inconclusive");
+                        if (currentReaction.length !== 1 || (maxCount - 1) <= gamedata.game.game.playersAlive.length / 2.4) {
+                            channel.send(new Discord.MessageEmbed().setTitle("The vote was inconclusive!"));
                             resolve();
                         } else {
                             let nominee = currentReaction[0];
@@ -85,25 +118,43 @@ module.exports = {
                                 votingPrompt.react("✅");
                                 votingPrompt.react("❌")
                                 promptFilter = (reaction, tuser) => {
-                                    return ["✅", "❌"].includes(reaction.emoji.name) && tuser.id !== "827754470825787413"
-                                        && gamedata.players.get(gamedata.userids.get(tuser.id)).isAlive 
-                                        && !gamedata.players.get(gamedata.userids.get(tuser.id)).wasSilenced
-                                        && tuser.id !== gamedata.players.get(nominee).id;
+                                    return ["✅", "❌"].includes(reaction.emoji.name) && tuser.id !== "827754470825787413" && gamedata.userids.get(tuser.id) &&
+                                        gamedata.players.get(gamedata.userids.get(tuser.id)).isAlive &&
+                                        !gamedata.players.get(gamedata.userids.get(tuser.id)).wasSilenced &&
+                                        tuser.id !== gamedata.players.get(nominee).id;
                                 };
                                 votingPrompt.awaitReactions(promptFilter, {
                                     time: gamedata.settings.get("dayTime") * 1000,
                                 }).then((votingEmojis) => {
                                     votingEmojis = votingEmojis.filter(t => t.count > 1)
-                                    let votingResult = (votingEmojis.get("✅") ?? {count:0}).count > (votingEmojis.get("❌") ?? {count:0}).count ? "✅" : undefined;
+
+                                    let votingResult = (votingEmojis.get("✅") ?? {
+                                        count: 0
+                                    }).count > (votingEmojis.get("❌") ?? {
+                                        count: 0
+                                    }).count ? "✅" : undefined;
+                                    let yays = votingEmojis.get("✅") ? Array.from(votingEmojis.get("✅").users.cache.values()).filter(t => t.id !== "827754470825787413").map(t => `<@${t.id}>`).join("\n") : "None";
+                                    let nays = votingEmojis.get("❌") ? Array.from(votingEmojis.get("❌").users.cache.values()).filter(t => t.id !== "827754470825787413").map(t => `<@${t.id}>`).join("\n") : "None";
                                     let votingResultMsg;
                                     if (!votingResult) {
-                                        votingResultMsg = `${nominee} was acquitted.`;
+                                        // votingResultMsg = `${nominee} was acquitted.`;
+                                        votingResultMsg = new Discord.MessageEmbed()
+                                            .setColor("#1e8c00")
+                                            .setTitle(`${gamedata.players.get(nominee).username} has been acquitted!`)
+                                            .setDescription("Here were the votes:")
+                                            .addField("Guilty", yays, true)
+                                            .addField("Innocent", nays, true);
                                     } else {
                                         let user = gamedata.players.get(nominee)
                                         user.isAlive = false;
                                         gamedata.players.set(nominee, user);
                                         gamedata.game.game.playersAlive = gamedata.game.game.playersAlive.filter(player => player !== nominee);
-                                        votingResultMsg = `F in the chats for ${nominee}.`;
+                                        votingResultMsg = new Discord.MessageEmbed()
+                                            .setColor("#d50000")
+                                            .setTitle(`${gamedata.players.get(nominee).username} is found guilty!`)
+                                            .setDescription("Here were the votes:")
+                                            .addField("Guilty", yays, true)
+                                            .addField("Innocent", nays, true);
                                     }
                                     channel.send(votingResultMsg).then(() => {
                                         resolve();
@@ -153,7 +204,7 @@ module.exports = {
                 }
                 let roundOverTitle = `Night ${round} is over!`;
                 if (gamedata.game.game.deadThisRound.length === 0) {
-                    roundOverTitle += "Nothing eventful happened.";
+                    roundOverTitle += " Nothing eventful happened.";
                 } else {
                     roundOverTitle += "A few things happened...";
                 }

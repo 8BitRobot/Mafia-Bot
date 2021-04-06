@@ -5,7 +5,7 @@ module.exports = {
     description: "",
     async execute(message, args, gamedata) {
         function createVillage() {
-            if (gamedata.players.size < 4) { // TODO: increase to 5
+            if (gamedata.players.size < 3) { // TODO: increase to 5
                 message.channel.send("You don't have enough people!");
                 return false;
             }
