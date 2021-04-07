@@ -289,7 +289,7 @@ module.exports = {
                     let orderOfActions = [
                         // ["Distractor", "Village"],
                         // ["Jailer", "Village"],
-                        // ["Framer", "Mafia"],
+                        ["Framer", "Mafia"],
                         // ["Silencer", "Mafia"],
                         ["Godfather", "Mafia"],
                         ["Mafioso", "Mafia"],
@@ -334,7 +334,9 @@ module.exports = {
                                 });
                                 break;
                             case "frame":
-
+                                temp = gamedata.players.get(action.choice);
+                                temp.wasFramed = true;
+                                gamedata.players.set(action.choice, temp);
                                 break;
                             case "kill-vigil":
                                 let vigilante = gamedata.players.get(tag);
@@ -392,6 +394,7 @@ module.exports = {
                                 let suspect = gamedata.players.get(action.choice);
                                 message.guild.members.fetch(detective.id).then((user) => {
                                     let detectiveResultMsg;
+                                    console.log(suspect);
                                     if (suspect.align === "Mafia" || suspect.wasFramed) {
                                         detectiveResultMsg = new Discord.MessageEmbed()
                                             .setColor("#d50000")
