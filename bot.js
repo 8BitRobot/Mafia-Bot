@@ -685,11 +685,11 @@ spectatorClient.once("ready", () => {
         }
     });
     emit.on("stream", (streams) => {
-        for (stream of streams) {
+        for (let stream of streams) {
             // console.log(stream);
-            connection.play(stream, {type: 'opus', volume: false}); // does this work?
+            connection.play(stream, {type: "opus", volume: false});
         }
-    })
+    });
 });
 
 client.commands = new Discord.Collection();
