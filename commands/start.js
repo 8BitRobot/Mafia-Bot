@@ -17,7 +17,7 @@ module.exports = {
         }
 
         if (!gamedata.players.get(message.author.tag).isHost && message.author.tag !== "PiAreSquared#6784" && message.author.tag !== "8BitRobot#3625") {
-            message.channel.send(`**${message.author.tag}** does not have the permissions to start the game.`)
+            message.channel.send(`**${message.author.tag}** does not have the permissions to start the game.`);
             return;
         }
 
@@ -25,9 +25,12 @@ module.exports = {
         let users = [];
         var nonmafia = 0;
         var mafia = 0;
-        for (const [name, player] of gamedata.players) {
-            if (player.align === "Mafia") mafia++;
-            else nonmafia++;
+        for (const [_, player] of gamedata.players) {
+            if (player.align === "Mafia") {
+                mafia++;
+            } else {
+                nonmafia++;
+            }
             await message.guild.members.fetch(player.id).then((member) => {
                 users.push(member);
             });
@@ -45,23 +48,29 @@ module.exports = {
                     //     "images/20seconds.png",
                     // ])
                     // .setTitle("Time to discuss! Talk to your fellow villagers about the recent events.")
-                    .setDescription(`And once you're done, you have the option of nominating any suspicious villagers for a ritual execution.`)
-                    .setAuthor(`You have ${gamedata.settings.get("dayTime")} seconds total to discuss and vote!`);
+                    .setDescription("And once you're done, you have the option of nominating any suspicious villagers for a ritual execution.")
+                    .setAuthor(`You have ${gamedata.settings.get("dayTime")} seconds total to discuss and vote!`)
+                    .attachFiles([
+                        "images/voting.png",
+                        "images/1seconds.png",
+                        "images/2seconds.png",
+                        "images/3seconds.png",
+                        "images/10seconds.png",
+                    ])
+                    .setThumbnail("attachment://voting.png");
                 let emojiMap = new Map();
                 let i = 0;
                 for (let player of gamedata.game.game.playersAlive) {
-                    emojiMap.set(gamedata.emojiArray[i], player)
+                    emojiMap.set(gamedata.emojiArray[i], player);
                     nominateMsg.addField(`${gamedata.emojiArray[i]} ${player}`, "\u200B", false);
                     i++;
                 }
                 nominateMsg.setFooter(`Use the emojis below to vote on whom to nominate! (You need ${Math.ceil(gamedata.game.game.playersAlive.length / 2.4)} votes to nominate someone)`);
                 channel.send(nominateMsg).then(async (prompt) => {
                     let i = gamedata.settings.get("dayTime") - 1;
-                    
                     let countdown = setInterval(async () => {
                         i--;
                     }, 1000);
-                    
                     let reactions = [];
                     for (let emoji of emojiMap.keys()) {
                         reactions.push(new Promise((resolve) => {
@@ -70,19 +79,23 @@ module.exports = {
                             });
                         }));
                     }
-                    
-                    Promise.all(reactions).then(async()=> {
+
+                    Promise.all(reactions).then(async () => {
                         clearInterval(countdown);
                         countdown = setInterval(() => {
                             if (i <= 3 || i === 10 || i === 20) {
                                 nominateMsg.setAuthor(`You have ${i} second${i !== 1 ? "s": ""} left to vote!`);
-                                // nominateMsg.setThumbnail(`attachment://${i}seconds.png`)
-                                if (i <= 3) nominateMsg.setColor(i % 2 === 1 ? "#d50000" : "#1e8c00");
+                                if (i !== 20) {
+                                    nominateMsg.setThumbnail(`attachment://${i}seconds.png`);
+                                }
+                                if (i <= 3) {
+                                    nominateMsg.setColor(i % 2 === 1 ? "#d50000" : "#1e8c00");
+                                }
                                 prompt.edit(nominateMsg);
                             }
                             i--;
                         }, 1000);
-                    })
+                    });
                     let promptFilter = (reaction, tuser) => {
                         return Array.from(emojiMap.keys()).includes(reaction.emoji.name) && tuser.id !== "827754470825787413" && gamedata.userids.get(tuser.id) &&
                             gamedata.players.get(gamedata.userids.get(tuser.id)).isAlive &&
@@ -91,14 +104,13 @@ module.exports = {
                     prompt.awaitReactions(promptFilter, {
                         time: gamedata.settings.get("dayTime") * 1000,
                     }).then(async (emojis) => {
-                        clearInterval(countdown)
-                        emojis = emojis.filter(t => t.count > 1)
-                        let reactions = {};
+                        clearInterval(countdown);
+                        emojis = emojis.filter(t => t.count > 1);
                         let maxCount = 0;
                         let currentReaction = [];
                         for (let [emoji, emojiData] of emojis) {
                             if (emojiData.count > maxCount) {
-                                currentReaction = [emojiMap.get(emoji)]
+                                currentReaction = [emojiMap.get(emoji)];
                                 maxCount = emojiData.count;
                             } else if (emojiData.count === maxCount) {
                                 currentReaction.push(emojiMap.get(emoji));
@@ -116,7 +128,7 @@ module.exports = {
                                 .setFooter("Use the emojis below to vote for or against the execution!");
                             channel.send(votingMsg).then((votingPrompt) => {
                                 votingPrompt.react("✅");
-                                votingPrompt.react("❌")
+                                votingPrompt.react("❌");
                                 promptFilter = (reaction, tuser) => {
                                     return ["✅", "❌"].includes(reaction.emoji.name) && tuser.id !== "827754470825787413" && gamedata.userids.get(tuser.id) &&
                                         gamedata.players.get(gamedata.userids.get(tuser.id)).isAlive &&
@@ -126,12 +138,12 @@ module.exports = {
                                 votingPrompt.awaitReactions(promptFilter, {
                                     time: gamedata.settings.get("dayTime") * 1000,
                                 }).then((votingEmojis) => {
-                                    votingEmojis = votingEmojis.filter(t => t.count > 1)
+                                    votingEmojis = votingEmojis.filter(t => t.count > 1);
 
                                     let votingResult = (votingEmojis.get("✅") ?? {
-                                        count: 0
+                                        count: 0,
                                     }).count > (votingEmojis.get("❌") ?? {
-                                        count: 0
+                                        count: 0,
                                     }).count ? "✅" : undefined;
                                     let yays = votingEmojis.get("✅") ? Array.from(votingEmojis.get("✅").users.cache.values()).filter(t => t.id !== "827754470825787413").map(t => `<@${t.id}>`).join("\n") : "None";
                                     let nays = votingEmojis.get("❌") ? Array.from(votingEmojis.get("❌").users.cache.values()).filter(t => t.id !== "827754470825787413").map(t => `<@${t.id}>`).join("\n") : "None";
@@ -145,7 +157,7 @@ module.exports = {
                                             .addField("Guilty", yays, true)
                                             .addField("Innocent", nays, true);
                                     } else {
-                                        let user = gamedata.players.get(nominee)
+                                        let user = gamedata.players.get(nominee);
                                         user.isAlive = false;
                                         gamedata.players.set(nominee, user);
                                         gamedata.game.game.playersAlive = gamedata.game.game.playersAlive.filter(player => player !== nominee);
@@ -158,7 +170,7 @@ module.exports = {
                                     }
                                     channel.send(votingResultMsg).then(() => {
                                         resolve();
-                                    })
+                                    });
                                 });
                             });
                         }
@@ -177,8 +189,11 @@ module.exports = {
                     temp.wasFramed = false;
                     gamedata.players.set(user, temp);
                     if (gamedata.players.get(user).isAlive) {
-                        if (gamedata.players.get(user).align === "Mafia") mafia++;
-                        else nonmafia++;
+                        if (gamedata.players.get(user).align === "Mafia") {
+                            mafia++;
+                        } else {
+                            nonmafia++;
+                        }
                     }
                     if (!gamedata.players.get(user).isAlive || gamedata.players.get(user).wasSilenced) {
                         await message.guild.channels.resolve(gamedata.settings.get("textChannel")).updateOverwrite(member, {
@@ -203,7 +218,7 @@ module.exports = {
 
                 for (let member of users) {
                     await member.voice.setChannel(gamedata.settings.get("townHall")).catch(() => { // WE ADDED AN AWAIT HERE, IF IT DOESNT WORK REMEMBER THIS
-                        channel.send(`**${gamedata.players.get(gamedata.userids.get(member.id)).username}** could not be moved to the **Town Hall Meeting**, please join manually.`)
+                        channel.send(`**${gamedata.players.get(gamedata.userids.get(member.id)).username}** could not be moved to the **Town Hall Meeting**, please join manually.`);
                     });
                 }
                 let roundOverTitle = `Night ${round} is over!`;
@@ -221,27 +236,27 @@ module.exports = {
                         case "Mafia":
                             let mafiaAttackMsg = new Discord.MessageEmbed()
                                 .setColor("#d50000")
-                                .attachFiles([`images/death.png`])
+                                .attachFiles(["images/death.png"])
                                 .setThumbnail("attachment://death.png")
                                 .setTitle(`The Mafia attacked ${gamedata.players.get(death.name).username} last night!`);
                             if (gamedata.game.game.deadThisRound.filter(death => death.by === "Doctor").length === 0) {
-                                mafiaAttackMsg.setDescription("Unfortunately, the doctor was nowhere to be found.")
+                                mafiaAttackMsg.setDescription("Unfortunately, the doctor was nowhere to be found.");
                             }
                             await channel.send(mafiaAttackMsg);
                             break;
                         case "Doctor":
                             let doctorSaveMsg = new Discord.MessageEmbed()
                                 .setColor("#1e8c00")
-                                .attachFiles([`images/health.png`])
+                                .attachFiles(["images/health.png"])
                                 .setThumbnail("attachment://health.png")
-                                .setTitle(`However, the Doctor was able to save them!`);
+                                .setTitle("However, the Doctor was able to save them!");
                             await channel.send(doctorSaveMsg);
                             break;
                         case "Vigilante":
-                            let align = gamedata.players.get(death.name).align
+                            let align = gamedata.players.get(death.name).align;
                             let vigilanteKillMsg = new Discord.MessageEmbed()
                                 .setColor("#1e8c00")
-                                .attachFiles([`images/death.png`])
+                                .attachFiles(["images/death.png"])
                                 .setThumbnail("attachment://death.png")
                                 .setTitle(`The vigilante shot ${gamedata.players.get(death.name).username}!`)
                                 .setDescription(align === "Village" ?
@@ -255,54 +270,53 @@ module.exports = {
 
                 if (mafia >= nonmafia || mafia === 0) {
                     resolve(true);
-                }
-
-                let dayStartMsg = new Discord.MessageEmbed()
-                    .setTitle(`You've arrived at Town Hall on Day ${round}.`)
-                    .setDescription("Here's the attendance for today's meeting:")
-                let alive = "";
-                let dead = "";
-                let silenced;
-                for (let player of gamedata.game.game.playersAlive) {
-                    let temp = gamedata.players.get(player);
-                    let id = temp.id;
-                    if (!temp.wasSilenced) {
-                        alive += `\n<@${id}>`
-                    } else {
-                        silenced = `<@${id}>`;
-                        temp.wasSilenced = false;
-                        gamedata.players.set(player, temp);
-                    }
-                }
-                let playersDead = Array.from(gamedata.players.keys()).filter(a => !gamedata.game.game.playersAlive.includes(a)).map(tag => `<@${gamedata.players.get(tag).id}>`);
-                if (silenced) {
-                    playersDead.splice(Math.floor(Math.random() * playersDead.length), 0, silenced);
-                }
-                dead = playersDead.join("\n")
-                dayStartMsg.addField("Present", alive ? alive : "None", true);
-                dayStartMsg.addField("Absent", dead ? dead : "None", true);
-                channel.send(dayStartMsg);
-
-                console.log("BEFORE THE SETTIMEOUT");
-
-                setTimeout(() => {
-                    let voting = daytimeVoting().then(() => {
-                        nonmafia = 0;
-                        mafia = 0;
-                        for (const [name, player] of gamedata.players) {
-                            if (player.isAlive) {
-                                if (player.align === "Mafia") mafia++;
-                                else nonmafia++;
-                            }
-                        }
-                        if (mafia >= nonmafia || mafia === 0) {
-                            resolve(true);
+                } else {
+                    let dayStartMsg = new Discord.MessageEmbed()
+                        .setTitle(`You've arrived at Town Hall on Day ${round}.`)
+                        .setDescription("Here's the attendance for today's meeting:");
+                    let alive = "";
+                    let dead = "";
+                    let silenced;
+                    for (let player of gamedata.game.game.playersAlive) {
+                        let temp = gamedata.players.get(player);
+                        let id = temp.id;
+                        if (!temp.wasSilenced) {
+                            alive += `\n<@${id}>`;
                         } else {
-                            resolve();
+                            silenced = `<@${id}>`;
+                            temp.wasSilenced = false;
+                            gamedata.players.set(player, temp);
                         }
-                    });
-                }, gamedata.settings.get(dayTime) * 1000);
-            })
+                    }
+                    let playersDead = Array.from(gamedata.players.keys()).filter(a => !gamedata.game.game.playersAlive.includes(a)).map(tag => `<@${gamedata.players.get(tag).id}>`);
+                    if (silenced) {
+                        playersDead.splice(Math.floor(Math.random() * playersDead.length), 0, silenced);
+                    }
+                    dead = playersDead.join("\n");
+                    dayStartMsg.addField("Present", alive ? alive : "None", true);
+                    dayStartMsg.addField("Absent", dead ? dead : "None", true);
+                    channel.send(dayStartMsg);
+
+                    console.log("BEFORE THE SETTIMEOUT");
+
+                    setTimeout(() => {
+                        daytimeVoting().then(() => {
+                            nonmafia = 0;
+                            mafia = 0;
+                            for (const [_, player] of gamedata.players) {
+                                if (player.isAlive) {
+                                    if (player.align === "Mafia") {
+                                        mafia++;
+                                    } else {
+                                        nonmafia++;
+                                    }
+                                }
+                            }
+                            resolve(mafia >= nonmafia || mafia === 0);
+                        });
+                    }, gamedata.settings.get(dayTime) * 1000);
+                }
+            });
         }
 
         function nightActions(roundNum) {
@@ -312,21 +326,21 @@ module.exports = {
                     .setColor("#cccccc")
                     .setTitle(`The sun's down, and it's night ${roundNum}! Time to sleep...`);
                 let alive = "";
-                let silenced;
+                // let silenced;
                 for (let player of gamedata.game.game.playersAlive) {
                     let temp = gamedata.players.get(player);
                     let id = temp.id;
                     if (!temp.wasSilenced) {
-                        alive += `\n<@${id}>`
+                        alive += `\n<@${id}>`;
                     }
                 }
                 intro.addField("Leaving the meeting:", alive, true);
                 channel.send(intro);
                 let round = new Map();
                 let i = 0;
-                let promises = []
+                let promises = [];
                 for (const [tag, player] of gamedata.players) {
-                    let user = users[i]
+                    let user = users[i];
                     if (!player.isAlive) {
                         i++;
                         continue;
@@ -342,9 +356,9 @@ module.exports = {
                     let killed;
 
                     let orderOfActions = [
-                        // ["Distractor", "Village"],
+                        ["Distractor", "Village"],
                         // ["Jailer", "Village"],
-                        // ["Framer", "Mafia"],
+                        ["Framer", "Mafia"],
                         // ["Silencer", "Mafia"],
                         ["Godfather", "Mafia"],
                         ["Mafioso", "Mafia"],
@@ -356,7 +370,8 @@ module.exports = {
                         ["Spy", "Village"],
                     ];
 
-                    for (let [role, align] of orderOfActions) {
+                    for (let role of orderOfActions) {
+                        role = role[0];
                         if (!round.has(role)) {
                             continue;
                         }
@@ -364,11 +379,26 @@ module.exports = {
                         let action = r[0];
                         let tag = r[1];
                         if (!action.action) {
-                            continue; // TODO: handle this better
+                            continue;
+                        }
+                        let actor = gamedata.players.get(tag);
+                        if (actor.distracted) {
+                            let distractedMessage = new Discord.MessageEmbed()
+                                .setColor("#1e8c00")
+                                .setTitle("Unfortunately, while wandering the streets of Larkinville, you came across a strange-looking figure who offered you some colorful pills and brought you back to bed.")
+                                .setDescription("As a result, you were unable to do anything but sleep last night. Try again tomorrow!");
+                            message.guild.members.resolve(actor.id).send(distractedMessage);
+                            actor.distracted = false;
+                            continue;
                         }
                         let deadPerson;
                         let temp;
                         switch (action.action) {
+                            case "distract":
+                                temp = gamedata.players.get(action.choice);
+                                temp.distracted = true;
+                                gamedata.players.set(action.choice, temp);
+                                break;
                             case "kill":
                                 deadPerson = action.choice;
                                 killed = deadPerson;
@@ -383,17 +413,21 @@ module.exports = {
                                 message.guild.members.fetch(temp.id).then((user) => {
                                     let targetDeathMsg = new Discord.MessageEmbed()
                                         .setColor("#d50000")
-                                        .setTitle(`Unfortunately, you were attacked by the mafia.`)
+                                        .setTitle("Unfortunately, you were attacked by the mafia.")
                                         .setDescription(`You attempt to ${temp.role === "Doctor" ? "grab your first-aid kit!" : "summon the doctor using the Larkinville Emergency Line!"}`);
                                     user.send(targetDeathMsg);
                                 });
                                 break;
                             case "frame":
-
+                                temp = gamedata.players.get(action.choice);
+                                temp.wasFramed = true;
+                                gamedata.players.set(action.choice, temp);
                                 break;
                             case "kill-vigil":
                                 let vigilante = gamedata.players.get(tag);
-                                if (!vigilante.isAlive) break;
+                                if (!vigilante.isAlive) {
+                                    break;
+                                }
                                 deadPerson = action.choice;
                                 temp = gamedata.players.get(deadPerson);
                                 let align = temp.align;
@@ -408,7 +442,7 @@ module.exports = {
                                 message.guild.members.fetch(temp.id).then((user) => {
                                     let vigilanteTargetMsg = new Discord.MessageEmbed()
                                         .setColor("#d50000")
-                                        .setTitle(`Unfortunately, you were shot by the vigilante.`)
+                                        .setTitle("Unfortunately, you were shot by the vigilante.");
                                     user.send(vigilanteTargetMsg);
                                 });
                                 message.guild.members.fetch(vigilante.id).then((user) => {
@@ -416,7 +450,7 @@ module.exports = {
                                     if (align === "Village") {
                                         vigilanteKillMsg = new Discord.MessageEmbed()
                                             .setColor("#d50000")
-                                            .attachFiles([`images/death.png`])
+                                            .attachFiles(["images/death.png"])
                                             .setThumbnail("attachment://death.png")
                                             .setTitle(`After killing ${temp.username}, you find a sheet of paper laid on the table.`)
                                             .setDescription(`You discover that you have made a grave error and shot a villager. After giving ${temp.username} a proper burial, you load your gun for one final shot: yourself.`);
@@ -431,7 +465,7 @@ module.exports = {
                                         vigilanteKillMsg = new Discord.MessageEmbed()
                                             .setColor("#1e8c00")
                                             .setTitle(`After killing ${temp.username}, you find a sheet of paper laid on the table.`)
-                                            .setDescription(`The paper contains the Larkinville Mafia's plans to kill the rest of the village.`);
+                                            .setDescription("The paper contains the Larkinville Mafia's plans to kill the rest of the village.");
                                     } else {
                                         vigilanteKillMsg = new Discord.MessageEmbed()
                                             .setColor("#1984ff")
@@ -439,23 +473,26 @@ module.exports = {
                                             .setDescription(`The paper reads that ${temp.username} did not align with the Village but did not agree with the Larkinville Mafia's methods.`);
                                     }
                                     user.send(vigilanteKillMsg);
-                                })
+                                });
                                 break;
                             case "check":
                                 let detective = gamedata.players.get(tag);
-                                if (!detective.isAlive) break;
+                                if (!detective.isAlive) {
+                                    break;
+                                }
                                 let suspect = gamedata.players.get(action.choice);
                                 message.guild.members.fetch(detective.id).then((user) => {
                                     let detectiveResultMsg;
+                                    console.log(suspect);
                                     if (suspect.align === "Mafia" || suspect.wasFramed) {
                                         detectiveResultMsg = new Discord.MessageEmbed()
                                             .setColor("#d50000")
-                                            .setTitle(`Your investigation has revealed that the suspect is in the mafia!`)
+                                            .setTitle("Your investigation has revealed that the suspect is in the mafia!")
                                             .setDescription("That, or they may have been framed. Keep this in mind when revealing your findings to the town.");
                                     } else {
                                         detectiveResultMsg = new Discord.MessageEmbed()
                                             .setColor("#1e8c00")
-                                            .setTitle(`Your investigation has revealed that the suspect is clear.`)
+                                            .setTitle("Your investigation has revealed that the suspect is clear.")
                                             .setDescription("You can tell the town, but keep in mind you may be putting a target on your back.");
                                     }
                                     user.send(detectiveResultMsg);
@@ -468,12 +505,12 @@ module.exports = {
                                     gamedata.game.game.playersAlive.push(tag);
                                     // gamedata.game.game.deadThisRound = gamedata.game.game.deadThisRound.filter(t => t.name !== tag)
                                     doc.isAlive = true;
-                                    gamedata.players.set(tag, doc)
+                                    gamedata.players.set(tag, doc);
                                     let docSaveSuccessfulSelf = new Discord.MessageEmbed()
                                         .setColor("#1e8c00")
-                                        .attachFiles([`images/health.png`])
+                                        .attachFiles(["images/health.png"])
                                         .setThumbnail("attachment://health.png")
-                                        .setTitle(`You successfully saved yourself!`)
+                                        .setTitle("You successfully saved yourself!")
                                         .setDescription("The mafia tried to attack you, but you thwarted their efforts. The town will certainly hear about this.");
                                     message.guild.members.fetch(doc.id).then((user) => {
                                         user.send(docSaveSuccessfulSelf);
@@ -486,10 +523,10 @@ module.exports = {
                                     gamedata.game.game.playersAlive.push(action.choice);
                                     // gamedata.game.game.deadThisRound = gamedata.game.game.deadThisRound.filter(t => t.name !== action.choice)
                                     target.isAlive = true;
-                                    gamedata.players.set(action.choice, target)
+                                    gamedata.players.set(action.choice, target);
                                     let docSaveSuccessful = new Discord.MessageEmbed()
                                         .setColor("#1e8c00")
-                                        .attachFiles([`images/health.png`])
+                                        .attachFiles(["images/health.png"])
                                         .setThumbnail("attachment://health.png")
                                         .setTitle(`You successfully saved ${gamedata.players.get(action.choice).username}!`)
                                         .setDescription("The mafia tried to attack this person, but you thwarted their efforts. The town will certainly hear about this.");
@@ -498,10 +535,10 @@ module.exports = {
                                     });
                                     let targetSaveSuccessful = new Discord.MessageEmbed()
                                         .setColor("#1e8c00")
-                                        .attachFiles([`images/health.png`])
+                                        .attachFiles(["images/health.png"])
                                         .setThumbnail("attachment://health.png")
-                                        .setTitle(`You were saved by the Doctor!`)
-                                        .setDescription("The mafia attacked you last night, but the doctor was able to heal you just in time! The town will certainly hear about this.")
+                                        .setTitle("You were saved by the Doctor!")
+                                        .setDescription("The mafia attacked you last night, but the doctor was able to heal you just in time! The town will certainly hear about this.");
                                     message.guild.members.fetch(target.id).then((targetuser) => {
                                         targetuser.send(targetSaveSuccessful);
                                     });
@@ -512,10 +549,10 @@ module.exports = {
                                 } else if (killed) { // anyone attacked, unsuccesful save
                                     let unsuccesfulSave = new Discord.MessageEmbed()
                                         .setColor("#d50000")
-                                        .attachFiles([`images/death.png`])
+                                        .attachFiles(["images/death.png"])
                                         .setThumbnail("attachment://death.png")
                                         .setTitle(`${killed && gamedata.players.get(killed).role === "Doctor" ? "You failed to get your first-aid kit!" : "The doctor was unreachable!"} Unfortunately, you died.`)
-                                        .setDescription("Now that you are dead you can spectate the rest of the game, but you can no longer speak or perform any nightly actions. Please refrain from communicating with living players via video or DMs.")
+                                        .setDescription("Now that you are dead you can spectate the rest of the game, but you can no longer speak or perform any nightly actions. Please refrain from communicating with living players via video or DMs.");
                                     message.guild.members.fetch(gamedata.players.get(killed).id).then((user) => {
                                         user.send(unsuccesfulSave);
                                     });
@@ -529,7 +566,7 @@ module.exports = {
                                 console.log(action.action);
                                 console.log(role);
                                 break;
-                        };
+                        }
                     }
                     resolve();
                 });
@@ -542,7 +579,7 @@ module.exports = {
                 // spectatorClient.resolveID(gamedata.settings.get("ghostTown"))
                 for (let member of users) {
                     member.voice.setChannel(gamedata.players.get(gamedata.userids.get(member.id)).vc).catch(() => {
-                        channel.send(`**${gamedata.players.get(gamedata.userids.get(member.id)).username}** could not be moved to **their home**, please join manually.`)
+                        channel.send(`**${gamedata.players.get(gamedata.userids.get(member.id)).username}** could not be moved to **their home**, please join manually.`);
                     });
                 }
 
@@ -555,7 +592,13 @@ module.exports = {
         for (let i = 1; nonmafia > mafia; i++) {
             gamedata.game.game.currentRound = i;
             await nightTime(i);
-            if (await dayTime(i)) break;
+            let gameOver;
+            await dayTime(i).then((gameStatus) => {
+                gameOver = gameStatus;
+            });
+            if (gameOver) {
+                break;
+            }
             console.log(`Round ${i} completed.`);
         }
 
@@ -569,5 +612,5 @@ module.exports = {
             channel.send("Mafia Wins!!!");
             return;
         }
-    }
-}
+    },
+};

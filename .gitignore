@@ -1,3 +1,4 @@
 node_modules
 config.json
 spectatorConfig.json
+package-lock.json
