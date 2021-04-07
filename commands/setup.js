@@ -3,7 +3,7 @@ const Discord = require("discord.js");
 module.exports = {
     name: "setup",
     description: "",
-    async execute(message, args, gamedata) {
+    async execute(message, args, gamedata, spectatorClient) {
         function createVillage() {
             if (gamedata.players.size < 3) { // TODO: increase to 5
                 message.channel.send("You don't have enough people!");
@@ -191,6 +191,22 @@ module.exports = {
                             SPEAK: true,
                         });
                     }
+                }).then(() => {
+                    message.guild.channels.create("Ghosts of Larkinville", {
+                        type: 'voice',
+                        parent: category,
+                    }).then((ghostChannel) => {
+                        gamedata.settings.set("ghostTown", ghostChannel.id);
+                        let permsForGhost = []
+                        for (let [_, player] of gamedata.players) {
+                            permsForGhost.push({
+                                id: player.id,
+                                deny: ['VIEW_CHANNEL']
+                            })
+                        }
+                        ghostChannel.overwritePermissions(permsForGhost);
+                        gamedata.settings.get("emit").emit("ghost town", ghostChannel);
+                    })
                 }).then(() => {
                     message.guild.channels.create("Godfather's Lair", {
                         type: 'voice',

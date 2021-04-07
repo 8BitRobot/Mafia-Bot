@@ -2,7 +2,7 @@ const Discord = require("discord.js");
 module.exports = {
     name: "party",
     description: "",
-    execute(message, args, gamedata) {
+    execute(message, args, gamedata, spectatorClient) {
         var playerList = "";
         
         let playerCount = gamedata.players.size;

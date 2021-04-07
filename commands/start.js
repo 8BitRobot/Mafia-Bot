@@ -3,7 +3,7 @@ const Discord = require("discord.js");
 module.exports = {
     name: "start",
     description: "",
-    async execute(message, args, gamedata) {
+    async execute(message, args, gamedata, spectatorClient) {
         let channel = message.guild.channels.resolve(gamedata.settings.get("textChannel"));
 
         if (!gamedata.gameActive) {
@@ -188,6 +188,10 @@ module.exports = {
                         });
                         await message.guild.channels.resolve(gamedata.settings.get("townHall")).updateOverwrite(member, {
                             SPEAK: false,
+                        });
+                        await message.guild.channels.resolve(gamedata.settings.get("ghostTown")).updateOverwrite(member, {
+                            VIEW_CHANNEL: true,
+                            SPEAK: true
                         });
                         if (gamedata.players.get(user).align === "Mafia") {
                             await message.guild.channels.resolve(gamedata.settings.get("mafiaHouse")).updateOverwrite(member, {
@@ -535,6 +539,7 @@ module.exports = {
         function nightTime(round) {
             return new Promise((resolve) => {
                 console.log("night time");
+                // spectatorClient.resolveID(gamedata.settings.get("ghostTown"))
                 for (let member of users) {
                     member.voice.setChannel(gamedata.players.get(gamedata.userids.get(member.id)).vc).catch(() => {
                         channel.send(`**${gamedata.players.get(gamedata.userids.get(member.id)).username}** could not be moved to **their home**, please join manually.`)
