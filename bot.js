@@ -121,7 +121,7 @@ class GameData {
             },
             "Framer": {
                 align: "Mafia",
-                tier: 2, // TODO change to 2
+                tier: 2,
                 emojiMap: new Map(),
                 description: "You've moved up the ranks in the Larkinville Mafia due to your uncanny ability to alter the evidence. Your goal is to help the Mafia destroy the town by framing innocent villagers each night.",
                 prompt: (user) => {
@@ -220,7 +220,7 @@ class GameData {
         this.villageRoles = {
             "Doctor": {
                 align: "Village",
-                tier: 3, // TODO change to 1
+                tier: 3,
                 description: "You're the resident medical expert in Larkinville. Your job is to save those attacked by the Mafia.",
                 emojiMap: new Map(),
                 lastChoice: "",
@@ -292,7 +292,7 @@ class GameData {
             },
             "Detective": {
                 align: "Village",
-                tier: 2, // TODO change to 2
+                tier: 2,
                 description: "As the criminology expert in the Larkinville Police Department, you've been hard at work investigating recent murders each night. Your goal is to deduce the identities of the Mafia.",
                 emojiMap: new Map(),
                 prompt: (user) => {
@@ -471,7 +471,7 @@ class GameData {
             },
             "Distractor": {
                 align: "Village",
-                tier: 1, // TODO change to 4
+                tier: 4,
                 description: "",
                 workedLastNight: false,
                 emojiMap: new Map(),
