@@ -11,7 +11,7 @@
         "$": "readonly"
     },
     "parserOptions": {
-        "ecmaVersion": 2018
+        "ecmaVersion": 2020
     },
     "rules": {
         "eqeqeq": [
@@ -62,6 +62,8 @@
         "no-lonely-if": "error",
         "no-trailing-spaces": "error",
         "no-unneeded-ternary": "error",
+        "no-async-promise-executor": "off",
+        "no-case-declarations": "off",
         "space-before-function-paren": [
             "error", 
             {
