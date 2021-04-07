@@ -1,7 +1,7 @@
 module.exports = {
     name: "66",
     description: "",
-    async execute(message, args, gamedata) {
+    async execute(message, args, gamedata, spectatorClient) {
         let category;
         let arrayOfCategories = [];
         let categories = message.guild.channels.cache.filter(channel => channel.name === "Town of Larkinville");

@@ -1,6 +1,8 @@
 const Discord = require("discord.js");
 const client = new Discord.Client();
+const spectatorClient = new Discord.Client();
 const config = require("./config.json");
+const spectatorConfig = require("./spectatorConfig.json");
 const fs = require("fs");
 
 const prefix = "m.";
@@ -635,21 +637,60 @@ class GameData {
                 },
                 night: (user) => {
                     return new Promise((resolve) => {
-                        resolve({});
-                    });
-                },
-            },
-        };
+                        resolve({})
+                    })
+                }
+            }
+        }
+    };
+
+    addSpectatorBot (channel) {
+        channel.join()
     }
 }
 
 let gamedata = new GameData();
 
+client.login(config.token);
+spectatorClient.login(spectatorConfig.token);
+
 client.once("ready", () => {
     console.log("Ready!");
 });
 
-client.login(config.token);
+const EventEmitter = require("events");
+class MyEmitter extends EventEmitter {}
+const emit = new MyEmitter();
+gamedata.settings.set("emit", emit);
+
+spectatorClient.once("ready", () => {
+    console.log("Spectator ready!");
+    let connection;
+    emit.on("ghost town", async (channel) => {
+        console.log("Ghost town created!");
+        console.log(channel);
+        channel = spectatorClient.channels.resolve(channel.id);
+        console.log(channel);
+        try {
+            channel.join().then((con) => {
+                connection = con;
+            });
+        } catch (e) {
+            console.log("Error, trying again.");
+            setTimeout(() => {
+                channel.join().then((con) => {
+                    connection = con;
+                });
+            }, 2000);
+        }
+    });
+    emit.on("stream", (streams) => {
+        for (stream of streams) {
+            // console.log(stream);
+            connection.play(stream, {type: 'opus', volume: false}); // does this work?
+        }
+    })
+});
 
 client.commands = new Discord.Collection();
 
@@ -660,6 +701,7 @@ for (const file of commandFiles) {
     client.commands.set(command.name, command);
 }
 
+
 client.on("message", (message) => {
     if (!message.content.startsWith(prefix) || message.author.bot) {
         return;
@@ -668,7 +710,7 @@ client.on("message", (message) => {
         let args = message.content.substring(prefix.length).trim().split(/ +/);
         let command = args.shift().toLowerCase();
         try {
-            client.commands.get(command).execute(message, args, gamedata);
+            client.commands.get(command).execute(message, args, gamedata, spectatorClient);
         } catch (error) {
             console.error(error);
             message.channel.send("There was an error. The command didn't work.");

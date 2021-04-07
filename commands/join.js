@@ -2,7 +2,7 @@ const Discord = require("discord.js");
 module.exports = {
     name: "join",
     description: "",
-    execute(message, args, gamedata) {
+    execute(message, args, gamedata, spectatorClient) {
         if (gamedata.players.has(message.author.tag)) {
             message.channel.send(`**${message.author.username}** is already in the party.`);
         } else if (gamedata.gameActive) {

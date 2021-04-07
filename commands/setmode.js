@@ -2,7 +2,7 @@ const Discord = require("discord.js");
 module.exports = {
     name: "setmode",
     description: "",
-    execute(message, args, gamedata) {
+    execute(message, args, gamedata, spectatorClient) {
         gamedata.settings.set("gamemode", args[0]);
         let joinEmbed = new Discord.MessageEmbed()
             .setColor("#2196F3")

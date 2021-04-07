@@ -1,7 +1,7 @@
 module.exports = {
     name: "leave",
     description: "",
-    execute(message, args, gamedata) {
+    execute(message, args, gamedata, spectatorClient) {
         let dev = ["PiAreSquared#6784", "8BitRobot#3625"]
         let isHost = gamedata.players.get(message.author.tag).isHost;
         if (gamedata.gameActive) {
