@@ -4,6 +4,8 @@ const spectatorClient = new Discord.Client();
 const config = require("./config.json");
 const spectatorConfig = require("./spectatorConfig.json");
 const fs = require("fs");
+const { StreamInput, StreamOutput } = require('fluent-ffmpeg-multistream')
+const prism = require("prism-media")
 
 const prefix = "m.";
 
@@ -644,7 +646,7 @@ class GameData {
         }
     };
 
-    addSpectatorBot (channel) {
+    addSpectatorBot(channel) {
         channel.join()
     }
 }
@@ -667,28 +669,44 @@ spectatorClient.once("ready", () => {
     console.log("Spectator ready!");
     let connection;
     emit.on("ghost town", async (channel) => {
+        let vchannel;
         console.log("Ghost town created!");
         console.log(channel);
-        channel = spectatorClient.channels.resolve(channel.id);
+        vchannel = spectatorClient.channels.resolve(channel.id);
         console.log(channel);
         try {
-            channel.join().then((con) => {
+            vchannel.join().then((con) => {
                 connection = con;
             });
         } catch (e) {
             console.log("Error, trying again.");
             setTimeout(() => {
-                channel.join().then((con) => {
+                vchannel = spectatorClient.channels.resolve(channel.id);
+                vchannel.join().then((con) => {
                     connection = con;
                 });
             }, 2000);
         }
     });
-    emit.on("stream", (streams) => {
-        for (stream of streams) {
-            // console.log(stream);
-            connection.play(stream, {type: 'opus', volume: false}); // does this work?
-        }
+    emit.on("stream", (stream) => {
+        // let streams = {
+        //     opus: stream,
+        //     input: stream,
+        //     volume: new prism.VolumeTransformer({
+        //         type: 's16le',
+        //         volume: .1
+        //     })
+        // }
+        // streams.opus = stream
+        //     .pipe(streams.volume)
+        //     .pipe(new prism.opus.Encoder({
+        //         channels: 2,
+        //         rate: 48000,
+        //         frameSize: 480
+        //     }));
+        // let dispatcher = connection.player.createDispatcher({}, {});
+        // streams.opus.pipe(dispatcher);
+        connection.play(stream, {type: "converted"});
     })
 });
 
