@@ -5,7 +5,7 @@ module.exports = {
     description: "",
     async execute(message, args, gamedata, spectatorClient) {
         function createVillage() {
-            if (gamedata.players.size < 1) { // TODO: increase to 5
+            if (gamedata.players.size < 3) { // TODO: increase to 5
                 message.channel.send("You don't have enough people!");
                 return false;
             }
@@ -38,7 +38,7 @@ module.exports = {
                     neutralCount++;
                 }
             } else {
-                mafiaCount = 1;
+                mafiaCount = 1; // TODO change to 1
                 neutralCount = (gamedata.players.size < 5) ? 0 : 1;
             }
 
@@ -78,7 +78,6 @@ module.exports = {
                         tierMafiaRoles[3] = tierMafiaRoles[3].filter(v => v !== player.role);
                         break;
                 }
-                console.log(`${player.role.toLowerCase()}Roles`);
                 player.roleMessage = new Discord.MessageEmbed()
                     .setColor("#d50000")
                     .setTitle(`You are the **${player.role}**`)
@@ -286,7 +285,6 @@ module.exports = {
                     });
                 });
             });
-
         }
         let village = createVillage();
         if (!village) {

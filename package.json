@@ -2,6 +2,7 @@
   "dependencies": {
     "beamcoder": "^0.6.11",
     "discord.js": "^12.5.3",
+    "fluent-ffmpeg-multistream": "^1.0.0",
     "node-opus": "^0.3.3"
   }
 }
