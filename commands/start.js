@@ -140,13 +140,34 @@ module.exports = {
                                 }).then((votingEmojis) => {
                                     votingEmojis = votingEmojis.filter(t => t.count > 1);
 
-                                    let votingResult = (votingEmojis.get("✅") ?? {
-                                        count: 0,
-                                    }).count > (votingEmojis.get("❌") ?? {
-                                        count: 0,
-                                    }).count ? "✅" : undefined;
-                                    let yays = votingEmojis.get("✅") ? Array.from(votingEmojis.get("✅").users.cache.values()).filter(t => t.id !== "827754470825787413").map(t => `<@${t.id}>`).join("\n") : "None";
-                                    let nays = votingEmojis.get("❌") ? Array.from(votingEmojis.get("❌").users.cache.values()).filter(t => t.id !== "827754470825787413").map(t => `<@${t.id}>`).join("\n") : "None";
+                                    // let votingResult = (votingEmojis.get("✅") ?? {
+                                    //     count: 0,
+                                    // }).count > (votingEmojis.get("❌") ?? {
+                                    //     count: 0,
+                                    // }).count ? "✅" : undefined;
+
+                                    let user = gamedata.players.get(nominee);
+                                    let yays = votingEmojis.get("✅") 
+                                        ? Array.from(votingEmojis.get("✅").users.cache.values())
+                                            .filter(t => t.id !== "827754470825787413"
+                                                && t.id !== user.id
+                                                && gamedata.players.get(gamedata.userids.get(t.id)).isAlive)
+                                            .map(t => `<@${t.id}>`)
+                                        : [];
+                                    let nays = votingEmojis.get("❌")
+                                        ? Array.from(votingEmojis.get("❌").users.cache.values())
+                                            .filter(t => t.id !== "827754470825787413"
+                                                && t.id !== user.id
+                                                && gamedata.players.get(gamedata.userids.get(t.id)).isAlive)
+                                            .map(t => `<@${t.id}>`)
+                                        : [];
+                                    let votingResult = yays.length > nays.length;
+                                    if (yays.length === 0) {
+                                        yays = ["None"];
+                                    }
+                                    if (nays.length === 0) {
+                                        nays = ["None"];
+                                    }
                                     let votingResultMsg;
                                     if (!votingResult) {
                                         // votingResultMsg = `${nominee} was acquitted.`;
@@ -157,8 +178,10 @@ module.exports = {
                                             .addField("Guilty", yays, true)
                                             .addField("Innocent", nays, true);
                                     } else {
-                                        let user = gamedata.players.get(nominee);
                                         user.isAlive = false;
+                                        if (user.align === "Mafia" && gamedata.mafiaRoles[user.role].isGodfather) {
+                                            gamedata.mafiaRoles.updateGodfather(message.guild);
+                                        }
                                         gamedata.players.set(nominee, user);
                                         gamedata.game.game.playersAlive = gamedata.game.game.playersAlive.filter(player => player !== nominee);
                                         votingResultMsg = new Discord.MessageEmbed()
@@ -247,13 +270,17 @@ module.exports = {
                     .setTitle(roundOverTitle);
                 channel.send(roundOverMsg);
                 for (let death of gamedata.game.game.deadThisRound) {
+                    let player = gamedata.players.get(death.name);
+                    if (player.align === "Mafia" && gamedata.mafiaRoles[player.role].isGodfather) {
+                        gamedata.mafiaRoles.updateGodfather(message.guild);
+                    }
                     switch (death.by) {
                         case "Mafia":
                             let mafiaAttackMsg = new Discord.MessageEmbed()
                                 .setColor("#d50000")
                                 .attachFiles(["images/death.png"])
                                 .setThumbnail("attachment://death.png")
-                                .setTitle(`The Mafia attacked ${gamedata.players.get(death.name).username} last night!`);
+                                .setTitle(`The Mafia attacked ${player.username} last night!`);
                             if (gamedata.game.game.deadThisRound.filter(death => death.by === "Doctor").length === 0) {
                                 mafiaAttackMsg.setDescription("Unfortunately, the doctor was nowhere to be found.");
                             }
@@ -268,12 +295,12 @@ module.exports = {
                             await channel.send(doctorSaveMsg);
                             break;
                         case "Vigilante":
-                            let align = gamedata.players.get(death.name).align;
+                            let align = player.align;
                             let vigilanteKillMsg = new Discord.MessageEmbed()
                                 .setColor("#1e8c00")
                                 .attachFiles(["images/death.png"])
                                 .setThumbnail("attachment://death.png")
-                                .setTitle(`The vigilante shot ${gamedata.players.get(death.name).username}!`)
+                                .setTitle(`The vigilante shot ${player.username}!`)
                                 .setDescription(align === "Village" ?
                                     `Unfortunately, ${gamedata.players.get(death.name).username} was a **villager**. The vigilante, ${death.vigil}, committed suicide out of guilt.` :
                                     `${gamedata.players.get(death.name).username} was a **${align}**! The vigilante lives to shoot another day.`
@@ -284,7 +311,7 @@ module.exports = {
                 }
 
                 if (mafia >= nonmafia || mafia === 0) {
-                    resolve(true);
+                    // resolve(true);
                 } else {
                     let dayStartMsg = new Discord.MessageEmbed()
                         .setTitle(`You've arrived at Town Hall on Day ${round}.`)
@@ -483,10 +510,6 @@ module.exports = {
                                             .setDescription(`You discover that you have made a grave error and shot a villager. After giving ${temp.username} a proper burial, you load your gun for one final shot: yourself.`);
                                         vigilante.isAlive = false;
                                         gamedata.players.set(tag, vigilante);
-                                        // gamedata.game.game.deadThisRound.push({
-                                        //     name: tag,
-                                        //     by: "Vigilante-Suicide",
-                                        // });
                                         gamedata.game.game.playersAlive = gamedata.game.game.playersAlive.filter(t => t !== tag);
                                     } else if (align === "Mafia") {
                                         vigilanteKillMsg = new Discord.MessageEmbed()

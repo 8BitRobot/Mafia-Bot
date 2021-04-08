@@ -38,7 +38,7 @@ module.exports = {
                     neutralCount++;
                 }
             } else {
-                mafiaCount = 1; // TODO change to 1
+                mafiaCount = 1;
                 neutralCount = (gamedata.players.size < 5) ? 0 : 1;
             }
 
@@ -78,6 +78,7 @@ module.exports = {
                         tierMafiaRoles[3] = tierMafiaRoles[3].filter(v => v !== player.role);
                         break;
                 }
+                gamedata.mafiaRoles.currentMafia[player.role] = randPlayer;
                 player.roleMessage = new Discord.MessageEmbed()
                     .setColor("#d50000")
                     .setTitle(`You are the **${player.role}**`)

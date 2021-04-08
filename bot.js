@@ -53,11 +53,43 @@ class GameData {
         this.settings.set("votingTime", 10);
 
         this.mafiaRoles = {
+            updateGodfather: (guild) => {
+                let hierarchy = ["Mafioso", "Framer", "Disguiser", "Silencer"];
+                let activeMafia = Array.from(this.players.keys()).filter(i => this.players.get(i).align === "Mafia" && this.players.get(i).isAlive);
+                if (activeMafia.includes(this.mafiaRoles.currentMafia["Godfather"])) {
+                    return;
+                } else {
+                    for (let i of hierarchy) {
+                        let tag = this.mafiaRoles.currentMafia[i];
+                        if (activeMafia.includes(tag)) {
+                            this.mafiaRoles[i].isGodfather = true;
+                            let newGodfather = new Discord.MessageEmbed()
+                                .setColor("#d50000")
+                                .setTitle("As the current Godfather has died, you have been chosen to lead the Larkinville Mafia.")
+                                .setDescription("You will hereafter be responsible for killing the villagers of Larkinville. Use your newfound power wisely, for with great power comes great responsibility.")
+                                .attachFiles(["images/godfather.png"])
+                                .setImage("attachment://godfather.png")
+                            guild.members.fetch(this.players.get(tag).id).then((user) => {
+                                user.send(newGodfather);
+                            });
+                            break;
+                        }
+                    }
+                }
+            },
+            currentMafia: {
+                "Godfather": "",
+                "Mafioso": "",
+                "Framer": "",
+                "Disguiser": "",
+                "Silencer": "",
+            },
             "Godfather": {
                 description: "You're the leader of the Larkinville Mafia and order a murder each night. Your goal is to have all the townspeople killed.",
-                tier: 3, // TODO change to 1
+                tier: 1,
                 align: "Mafia",
                 emojiMap: new Map(),
+                isGodfather: true,
                 prompt: (user) => {
                     return new Promise((resolve) => {
                         let that = this.mafiaRoles["Godfather"];
@@ -67,7 +99,7 @@ class GameData {
                             .setColor("#d50000")
                             .setTitle(`Night ${this.game.game.currentRound}: Who do you want to kill?`)
                             .setDescription("Select a player using the reactions below:");
-                        for (let player of this.game.game.playersAlive.filter(t => t !== this.userids.get(user.id))) {
+                        for (let player of this.game.game.playersAlive.filter(t => t !== this.userids.get(user.id) && this.players.get(t).align !== "Mafia")) {
                             that.emojiMap.set(this.emojiArray[i], player);
                             message.addField(`${this.emojiArray[i]} ${player}`, "\u200B", false);
                             i++;
@@ -128,6 +160,7 @@ class GameData {
                 tier: 2,
                 emojiMap: new Map(),
                 description: "You've moved up the ranks in the Larkinville Mafia due to your uncanny ability to alter the evidence. Your goal is to help the Mafia destroy the town by framing innocent villagers each night.",
+                isGodfather: false,
                 prompt: (user) => {
                     return new Promise((resolve) => {
                         let that = this.mafiaRoles["Framer"];
@@ -177,17 +210,31 @@ class GameData {
                 night: (user) => {
                     return new Promise((resolve) => {
                         let that = this.mafiaRoles["Framer"];
+                        if (that.isGodfather) {
+                            that = this.mafiaRoles["Godfather"];
+                        }
                         that.prompt(user).then((selection) => {
                             if (selection === "") {
                                 resolve({});
                             } else {
-                                resolve(this.players.get(selection).role === "Baiter" ? {
-                                    action: "baited",
-                                    choice: this.userids.get(user.id),
-                                } : {
-                                    action: "frame",
-                                    choice: selection,
-                                });
+                                let action = {};
+                                if (this.players.get(selection).role === "Baiter") {
+                                    action = {
+                                        action: "baited",
+                                        choice: this.userids.get(user.id),
+                                    };
+                                } else if (this.mafiaRoles["Framer"].isGodfather) {
+                                    action = {
+                                        action: "kill",
+                                        choice: selection,
+                                    };
+                                } else {
+                                    action = {
+                                        action: "frame",
+                                        choice: selection,
+                                    };
+                                }
+                                resolve(action);
                             }
                         });
                     });
@@ -195,9 +242,10 @@ class GameData {
             },
             "Silencer": {
                 align: "Mafia",
-                tier: 1, // TODO change to 3
+                tier: 3,
                 description: "",
                 emojiMap: new Map(),
+                isGodfather: false,
                 workedLastNight: false,
                 silencedSoFar: [],
                 silence: (guild, userid) => {
@@ -293,17 +341,31 @@ class GameData {
                 night: (user) => {
                     return new Promise((resolve) => {
                         let that = this.mafiaRoles["Silencer"];
+                        if (that.isGodfather) {
+                            that = this.mafiaRoles["Godfather"];
+                        }
                         that.prompt(user).then((selection) => {
                             if (selection === "") {
                                 resolve({});
                             } else {
-                                resolve(this.players.get(selection).role === "Baiter" ? {
-                                    action: "baited",
-                                    choice: this.userids.get(user.id),
-                                } : {
-                                    action: "silence",
-                                    choice: selection,
-                                });
+                                let action = {};
+                                if (this.players.get(selection).role === "Baiter") {
+                                    action = {
+                                        action: "baited",
+                                        choice: this.userids.get(user.id),
+                                    };
+                                } else if (this.mafiaRoles["Silencer"].isGodfather) {
+                                    action = {
+                                        action: "kill",
+                                        choice: selection,
+                                    };
+                                } else {
+                                    action = {
+                                        action: "silence",
+                                        choice: selection,
+                                    };
+                                }
+                                resolve(action);
                             }
                         });
                     });
