@@ -898,7 +898,16 @@ client.on("message", (message) => {
     if (!message.content.startsWith(prefix) || message.author.bot) {
         return;
     }
-    if (message.content.startsWith(prefix)) {
+    if (message.content.startsWith(`${prefix}write`)) {
+        let args = message.content.substring(`${prefix}write`.length).trim();
+        let command = "write";
+        try {
+            client.commands.get(command).execute(message, args, gamedata, spectatorClient);
+        } catch (error) {
+            console.error(error);
+            message.channel.send("There was an error. The command didn't work.");
+        }
+    } else if (message.content.startsWith(prefix)) {
         let args = message.content.substring(prefix.length).trim().split(/ +/);
         let command = args.shift().toLowerCase();
         try {

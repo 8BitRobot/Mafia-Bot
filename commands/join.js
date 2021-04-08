@@ -19,6 +19,7 @@ module.exports = {
                 isAlive: true,
                 isHost: gamedata.players.size === 0,
                 vc: -1,
+                will: [],
             });
             gamedata.userids.set(message.author.id, message.author.tag);
             let joinEmbed = new Discord.MessageEmbed()
