@@ -38,7 +38,7 @@ module.exports = {
                     neutralCount++;
                 }
             } else {
-                mafiaCount = 2;
+                mafiaCount = 1;
                 neutralCount = (gamedata.players.size < 5) ? 0 : 1;
             }
 

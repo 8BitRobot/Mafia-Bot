@@ -115,7 +115,7 @@ module.exports = {
                             if (count > maxCount) {
                                 currentReaction = [emojiMap.get(emoji)];
                                 maxCount = count;
-                            } else if (emojiData.count === maxCount) {
+                            } else if (count === maxCount) {
                                 currentReaction.push(emojiMap.get(emoji));
                             }
                         }
@@ -154,21 +154,23 @@ module.exports = {
                                             .filter(t => t.id !== "827754470825787413"
                                                 && t.id !== user.id
                                                 && gamedata.players.get(gamedata.userids.get(t.id)).isAlive)
-                                            .map(t => `<@${t.id}>${gamedata.game.game.mayor === t.id ? " (Mayor)" : ""}`)
+                                            .map(t => t.id)
                                         : [];
                                     let nays = votingEmojis.get("❌")
                                         ? Array.from(votingEmojis.get("❌").users.cache.values())
                                             .filter(t => t.id !== "827754470825787413"
                                                 && t.id !== user.id
-                                                && gamedata.players.get(gamedata.userids.get(t.id)).isAlive)
-                                            .map(t => `<@${t.id}>${gamedata.game.game.mayor === t.id ? " (Mayor)" : ""}`)
+                                                && gamedata.players.get(gamedata.userids.get(t.id)).isAlive
+                                            ).map(t => t.id)
                                         : [];
                                     let yayCount = yays.length;
                                     let nayCount = nays.length;
-                                    if (user.role !== "Mayor" || Array.from(votingEmojis.get("✅").users.cache.values()).includes(gamedata.game.game.mayor)
-                                        && gamedata.players.get(gamedata.userids.get(gamedata.game.game.mayor)).isAlive) yayCount++;
-                                    if (user.role !== "Mayor" || Array.from(votingEmojis.get("❌").users.cache.values()).includes(gamedata.game.game.mayor)
-                                        && gamedata.players.get(gamedata.userids.get(gamedata.game.game.mayor)).isAlive) nayCount++;
+                                    if (gamedata.villageRoles["Mayor"].revealed && gamedata.players.get(gamedata.userids.get(gamedata.game.game.mayor)).isAlive) {
+                                        if (yays.includes(gamedata.game.game.mayor)) yayCount++;
+                                        if (nays.includes(gamedata.game.game.mayor)) nayCount++;
+                                    }
+                                    yays = yays.map(t => `<@${t}>${gamedata.game.game.mayor === t ? " (Mayor)" : ""}`);
+                                    nays = nays.map(t => `<@${t}>${gamedata.game.game.mayor === t ? " (Mayor)" : ""}`);
                                     let votingResult = yayCount > nayCount;
                                     if (yays.length === 0) {
                                         yays = ["None"];
@@ -263,7 +265,7 @@ module.exports = {
                     let player = gamedata.players.get(gamedata.userids.get(member.id));
                     if (player.silencedLastRound) {
                         await member.voice.setChannel(player.vc).catch(() => {
-                            channel.send(`**${player.username}** could not be moved to the **Town Hall Meeting**, please join manually.`);
+                            channel.send(`**${player.username}** could not be moved to the **their home**, please join manually.`);
                         });
                     } else {
                         await member.voice.setChannel(gamedata.settings.get("townHall")).catch(() => {
@@ -426,6 +428,7 @@ module.exports = {
                         ["Detective", "Village"],
                         ["PI", "Village"],
                         ["Spy", "Village"],
+                        ["Mayor", "Village"],
                     ];
                     for (let role of orderOfActions) {
                         role = role[0];
@@ -694,17 +697,24 @@ module.exports = {
                                 killed = null;
                                 break;
                             case "mayor-reveal":
-                                mayor = gamedata.players.get(tag);
+                                let mayor = gamedata.players.get(tag);
                                 if (!mayor.silencedThisRound) {
                                     gamedata.game.game.deadThisRound.push({
                                         by: "Mayor",
                                         name: tag
                                     })
                                     gamedata.game.game.mayor = mayor.id;
+                                } else {
+                                    let mayorSilencedMessage = new Discord.MessageEmbed()
+                                        .setColor("#d50000")
+                                        .setTitle("Since you were silenced while trying to reveal yourself, you won't be able to reveal this round.")
+                                        .setDescription("Try again tomorrow night!");
+                                    message.guild.members.fetch(mayor.id).then((mayorUser) => {
+                                        mayorUser.send(mayorSilencedMessage);
+                                    })
                                 }
                                 break;
                             case "baited":
-
                                 break;
                             default:
                                 console.log(action.action);
