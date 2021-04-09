@@ -51,7 +51,7 @@ class GameData {
 
         */
 
-        this.settings.set("nightTime", 20);
+        this.settings.set("nightTime", 5); // TODO increase these times
         this.settings.set("dayTime", 20);
         this.settings.set("votingTime", 10);
 
@@ -424,6 +424,7 @@ class GameData {
         };
 
         this.villageRoles = {
+            players: [],
             tiers: {
                 1: {
                     roles: ["Doctor", "Detective"],
@@ -968,7 +969,7 @@ class GameData {
             players: [],
             tiers: {
                 1: {
-                    roles: ["Jester"], // TODO: add Executioner
+                    roles: ["Executioner"], // TODO: add Executioner
                     pick: 1,
                 },
                 2: {
@@ -985,32 +986,84 @@ class GameData {
                 align: "Neutral",
                 description: "",
                 target: "",
+                id: "",
                 wasLynched: false,
                 isJester: false,
-                prompt: (user) => {
-                    user.send("bruh");
-                },
-                night: (user) => {
-                    return new Promise((resolve) => {
-                        resolve({});
-                    });
-                },
-                win: (user, dead, byLynch) => {}, // RESOLVE FORMAT: { role: <role>, win: [, <win condition satisfied>, <win condition exclusive>]}
-            },
-            "Jester": {
-                align: "Neutral",
-                description: "",
-                wasLynched: false,
+                winMessage: new Discord.MessageEmbed()
+                    .setColor("#1984ff")
+                    .setTitle("You fools! You've played right into the Executioner's hands!")
+                    .setDescription(`<@${this.id}> tricked you into lynching his target. You thought the target was a Mafia, but they were only an innocent villager that the Executioner deeply hated.`)
+                    .attachFiles(["images/executioner.png"])
+                    .setThumbnail("attachment://executioner.png"),
                 prompt: (user) => {},
                 night: (user) => {
                     return new Promise((resolve) => {
                         resolve({});
                     });
                 },
-                win: (user, dead, byLynch) => {
+                win: (guild, user, dead, byLynch) => {
+                    let that = this.neutralRoles["Executioner"];
                     return new Promise((resolve) => {
-                        let jester = this.userids.get(this.players.get(user).id);
+                        if (that.isJester && user === dead && byLynch) {
+                            this.neutralRoles["Jester"].id = this.players.get(user).id;
+                            resolve({
+                                role: "Jester",
+                                win: [true, true]
+                            });
+                        } else if (!this.players.get(that.target).isAlive && !byLynch) {
+                            that.isJester = true;
+                            let execToJesterMessage = new Discord.MessageEmbed()
+                                .setColor("#1984ff")
+                                .setTitle("Since your target died during the night, you've decided to become the town Jester.")
+                                .setDescription("Your new goal is to get **yourself** lynched at a Town Hall meeting.")
+                                .attachFiles(["images/jester.png"])
+                                .setImage("attachment://jester.png");
+                            guild.members.fetch(this.players.get(user).id).then((user) => {
+                                user.send(execToJesterMessage);
+                            });
+                            resolve({
+                                role: "Executioner",
+                                win: [false, true],
+                            });
+                        } else {
+                            if (that.target === dead && byLynch) {
+                                that.id = this.players.get(user).id;
+                                resolve({
+                                    role: "Executioner",
+                                    win: [true, true],
+                                });
+                            } else {
+                                resolve({
+                                    role: "Executioner",
+                                    win: [false, true],
+                                });
+                            }
+                        }
+                    });
+                }, // RESOLVE FORMAT: { role: <role>, win: [, <win condition satisfied>, <win condition exclusive>]}
+            },
+            "Jester": {
+                align: "Neutral",
+                description: "",
+                wasLynched: false,
+                id: "",
+                winMessage: new Discord.MessageEmbed()
+                    .setColor("#1984ff")
+                    .setTitle("You fools! You've played right into the Jester's hands!")
+                    .setDescription(`<@${this.id}> tricked you into lynching him. You thought the Jester was a clown, but the rest of you were the clowns all along!`)
+                    .attachFiles(["images/jester.png"])
+                    .setThumbnail("attachment://jester.png"),
+                prompt: (user) => {},
+                night: (user) => {
+                    return new Promise((resolve) => {
+                        resolve({});
+                    });
+                },
+                win: (guild, user, dead, byLynch) => {
+                    return new Promise((resolve) => {
+                        let jester = user;
                         if (jester === dead && byLynch) {
+                            this.neutralRoles["Jester"].id = this.players.get(dead).id;
                             resolve({
                                 role: "Jester",
                                 win: [true, true],
@@ -1122,7 +1175,7 @@ class GameData {
                         });
                     });
                 },
-                win: (user, _, byLynch) => {
+                win: (guild, user, _, byLynch) => {
                     return new Promise((resolve) => {
                         if (this.playersAlive.length === 1 && this.players.get(user).isAlive)  {
                             resolve({

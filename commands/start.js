@@ -215,10 +215,8 @@ module.exports = {
         function checkWin(dead, afterVote) {
             return new Promise((resolve) => {
                 let neutralWinChecks = [];
-                if (dead) {
-                    for (let i of gamedata.neutralRoles.players) {
-                        neutralWinChecks.push(gamedata.neutralRoles[user.role].win(i, dead, afterVote))
-                    }
+                for (let i of gamedata.neutralRoles.players) {
+                    neutralWinChecks.push(gamedata.neutralRoles[gamedata.players.get(i).role].win(message.guild, i, dead, afterVote))
                 }
                 Promise.all(neutralWinChecks).then((results) => {
                     let win;
@@ -377,39 +375,41 @@ module.exports = {
                 checkWin("none", false).then((winResult) => {
                     if (winResult[1]) {
                         resolve(winResult);
-                    }
-                }).then(() => {
-                    let dayStartMsg = new Discord.MessageEmbed()
-                        .setTitle(`You've arrived at Town Hall on Day ${round}.`)
-                        .setDescription("Here's the attendance for today's meeting:");
-                    let alive = "";
-                    let dead = "";
-                    let silenced;
-                    for (let player of gamedata.game.game.playersAlive) {
-                        let temp = gamedata.players.get(player);
-                        let id = temp.id;
-                        if (!temp.silencedLastRound) {
-                            alive += `\n<@${id}>`;
-                        } else {
-                            silenced = `<@${id}>`;
+                    } else {
+                        let dayStartMsg = new Discord.MessageEmbed()
+                            .setTitle(`You've arrived at Town Hall on Day ${round}.`)
+                            .setDescription("Here's the attendance for today's meeting:");
+                        let alive = "";
+                        let dead = "";
+                        let silenced;
+                        for (let player of gamedata.game.game.playersAlive) {
+                            let temp = gamedata.players.get(player);
+                            let id = temp.id;
+                            if (!temp.silencedLastRound) {
+                                alive += `\n<@${id}>`;
+                            } else {
+                                silenced = `<@${id}>`;
+                            }
                         }
-                    }
-                    let playersDead = Array.from(gamedata.players.keys()).filter(a => !gamedata.game.game.playersAlive.includes(a)).map(tag => `<@${gamedata.players.get(tag).id}>`);
-                    if (silenced) {
-                        playersDead.splice(Math.floor(Math.random() * playersDead.length), 0, silenced);
-                    }
-                    dead = playersDead.join("\n");
-                    dayStartMsg.addField("Present", alive ? alive : "None", true);
-                    dayStartMsg.addField("Absent", dead ? dead : "None", true);
-                    channel.send(dayStartMsg);
+                        let playersDead = Array.from(gamedata.players.keys()).filter(a => !gamedata.game.game.playersAlive.includes(a)).map(tag => `<@${gamedata.players.get(tag).id}>`);
+                        if (silenced) {
+                            playersDead.splice(Math.floor(Math.random() * playersDead.length), 0, silenced);
+                        }
+                        dead = playersDead.join("\n");
+                        dayStartMsg.addField("Present", alive ? alive : "None", true);
+                        dayStartMsg.addField("Absent", dead ? dead : "None", true);
+                        channel.send(dayStartMsg);
 
-                    setTimeout(() => {
-                        daytimeVoting().then((result) => {
-                            checkWin(result, true).then((winResult) => {
-                                resolve(winResult);
+                        setTimeout(() => {
+                            daytimeVoting().then((result) => {
+                                if (result[0]) {
+                                    checkWin(result[1], true).then((winResult) => {
+                                        resolve(winResult);
+                                    });
+                                }
                             });
-                        });
-                    }, gamedata.settings.get(dayTime) * 1000);
+                        }, gamedata.settings.get(dayTime) * 1000);
+                    }
                 });
             });
         }
@@ -818,14 +818,11 @@ module.exports = {
         gamedata.gameActive = false;
         gamedata.gameReady = false;
         if (gameOver[0] === "neutral") {
-
+            channel.send(gamedata.neutralRoles[gameOver[2]].winMessage);
+        } else if (gameOver[0] === "mafia") {
+            channel.send("Mafia wins!");
+        } else if (gameOver[0] === "village") {
+            channel.send("Village wins!");
         }
-        // if (mafia === 0) {
-        //     channel.send("Village Wins!!!");
-        //     return;
-        // } else if (mafia >= nonmafia) {
-        //     channel.send("Mafia Wins!!!");
-        //     return;
-        // }
     },
 };

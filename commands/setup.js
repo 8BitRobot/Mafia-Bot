@@ -74,7 +74,6 @@ module.exports = {
                         currentTier++;
                     }
                 }
-                console.log(player.role); // TODO remove
                 rolePool = rolePool.filter(v => v !== player.role);
 
                 gamedata.mafiaRoles.currentMafia[player.role] = randPlayer;
@@ -98,6 +97,7 @@ module.exports = {
                 randPlayer = playersList[Math.floor(Math.random() * playersList.length)];
                 playersList = playersList.filter(v => v !== randPlayer);
                 let player = gamedata.players.get(randPlayer);
+                gamedata.villageRoles.players.push(randPlayer);
                 player.align = "Village";
 
                 if (!currentTierObject[currentTier]) {
@@ -116,7 +116,6 @@ module.exports = {
                         currentTier++;
                     }
                 }
-                console.log(player.role); // TODO remove
                 rolePool = rolePool.filter(v => v !== player.role);
                 
                 player.roleMessage = new Discord.MessageEmbed()
@@ -159,7 +158,20 @@ module.exports = {
                     }
                 }
                 rolePool = rolePool.filter(v => v !== player.role);
-                console.log(player.role); // TODO remove
+
+                if (player.role === "Executioner") {
+                    let villageRolesFiltered = gamedata.villageRoles.players.filter(t => gamedata.players.get(t).role !== "Mayor");
+                    let target = villageRolesFiltered[Math.floor(Math.random() * villageRolesFiltered.length)];
+                    gamedata.neutralRoles["Executioner"].target = target;
+                    let targetUsername = gamedata.players.get(target).username;
+                    let targetMessage = new Discord.MessageEmbed()
+                        .setColor("#1984ff")
+                        .setTitle(`Your target is ${targetUsername}. Your goal is to get them lynched.`)
+                        .setDescription("If they die, you will become the Jester, and your goal will be to get **yourself** lynched instead.")
+                        .attachFiles(["images/death.png"])
+                        .setThumbnail("attachment://death.png");
+                    player.execMessage = targetMessage;
+                }
 
                 player.roleMessage = new Discord.MessageEmbed()
                     .setColor("#1984ff")
@@ -236,7 +248,11 @@ module.exports = {
                     }).then(async () => {
                         for (const [tag, player] of gamedata.players) {
                             await message.guild.members.fetch(player.id).then((user) => {
-                                user.send(player.roleMessage);
+                                user.send(player.roleMessage).then(() => {
+                                    if (player.role === "Executioner") {
+                                        user.send(player.execMessage);
+                                    }
+                                });
                             });
                             if (player.align !== "Mafia" || gamedata.settings.get("mafiaHidden")) {
                                 message.guild.channels.create(player.role === "Mayor" ? "Mayor's Residence" : player.username + "'s Home", {
