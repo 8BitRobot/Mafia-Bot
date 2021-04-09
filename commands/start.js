@@ -208,6 +208,10 @@ module.exports = {
                             VIEW_CHANNEL: true,
                             SPEAK: true
                         });
+                        await message.guild.channels.resolve(gamedata.settings.get("ghostChat")).updateOverwrite(member, {
+                            VIEW_CHANNEL: true,
+                            SPEAK: true
+                        });
                         if (gamedata.players.get(user).align === "Mafia") {
                             await message.guild.channels.resolve(gamedata.settings.get("mafiaHouse")).updateOverwrite(member, {
                                 VIEW_CHANNEL: false,
@@ -576,7 +580,6 @@ module.exports = {
         function nightTime(round) {
             return new Promise((resolve) => {
                 console.log("night time");
-                // spectatorClient.resolveID(gamedata.settings.get("ghostTown"))
                 for (let member of users) {
                     member.voice.setChannel(gamedata.players.get(gamedata.userids.get(member.id)).vc).catch(() => {
                         channel.send(`**${gamedata.players.get(gamedata.userids.get(member.id)).username}** could not be moved to **their home**, please join manually.`);

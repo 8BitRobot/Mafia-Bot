@@ -5,7 +5,7 @@ module.exports = {
     description: "",
     async execute(message, args, gamedata, spectatorClient) {
         function createVillage() {
-            if (gamedata.players.size < 3) { // TODO: increase to 5
+            if (gamedata.players.size < 1) { // TODO: increase to 5
                 message.channel.send("You don't have enough people!");
                 return false;
             }
@@ -208,14 +208,28 @@ module.exports = {
                     }).then((ghostChannel) => {
                         gamedata.settings.set("ghostTown", ghostChannel.id);
                         let permsForGhost = []
-                        for (let [_, player] of gamedata.players) {
-                            permsForGhost.push({
-                                id: player.id,
-                                deny: ['VIEW_CHANNEL']
-                            })
-                        }
+                        // for (let [_, player] of gamedata.players) {
+                        //     permsForGhost.push({
+                        //         id: player.id,
+                        //         deny: ['VIEW_CHANNEL']
+                        //     })
+                        // }
                         ghostChannel.overwritePermissions(permsForGhost);
                         gamedata.settings.get("emit").emit("ghost town", ghostChannel);
+                    })
+                    message.guild.channels.create("Larkinville Cemetery", {
+                        type: 'text',
+                        parent: category,
+                    }).then((ghostChat) => {
+                        gamedata.settings.set("ghostChat", ghostChat.id);
+                        let permsForGhost = []
+                        // for (let [_, player] of gamedata.players) {
+                        //     permsForGhost.push({
+                        //         id: player.id,
+                        //         deny: ['VIEW_CHANNEL']
+                        //     })
+                        // }
+                        ghostChat.overwritePermissions(permsForGhost);
                     })
                 }).then(() => {
                     message.guild.channels.create("Godfather's Lair", {

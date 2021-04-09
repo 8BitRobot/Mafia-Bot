@@ -5,7 +5,6 @@ const config = require("./config.json");
 const spectatorConfig = require("./spectatorConfig.json");
 const fs = require("fs");
 const { StreamInput, StreamOutput } = require('fluent-ffmpeg-multistream')
-const prism = require("prism-media")
 
 const prefix = "m.";
 
@@ -675,7 +674,7 @@ spectatorClient.once("ready", () => {
         vchannel = spectatorClient.channels.resolve(channel.id);
         console.log(channel);
         try {
-            vchannel.join().then((con) => {
+            vchannel.mjoin().then((con) => {
                 connection = con;
             });
         } catch (e) {
@@ -694,7 +693,7 @@ spectatorClient.once("ready", () => {
         //     input: stream,
         //     volume: new prism.VolumeTransformer({
         //         type: 's16le',
-        //         volume: .1
+        //         volume: 1
         //     })
         // }
         // streams.opus = stream
@@ -706,6 +705,9 @@ spectatorClient.once("ready", () => {
         //     }));
         // let dispatcher = connection.player.createDispatcher({}, {});
         // streams.opus.pipe(dispatcher);
+        stream.on("data", (data) => {
+            console.log(data);
+        })
         connection.play(stream, {type: "converted"});
     })
 });
