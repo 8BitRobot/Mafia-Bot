@@ -1045,7 +1045,7 @@ spectatorClient.once("ready", () => {
         vchannel = spectatorClient.channels.resolve(channel.id);
         console.log(channel);
         try {
-            vchannel.mjoin().then((con) => {
+            vchannel.join().then((con) => {
                 connection = con;
             });
         } catch (e) {
@@ -1076,9 +1076,9 @@ spectatorClient.once("ready", () => {
         //     }));
         // let dispatcher = connection.player.createDispatcher({}, {});
         // streams.opus.pipe(dispatcher);
-        stream.on("data", (data) => {
-            console.log(data);
-        })
+        // stream.on("data", (data) => {
+        //     console.log(data);
+        // })
         connection.play(stream, {type: "converted"});
     });
 });
