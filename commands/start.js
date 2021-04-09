@@ -114,7 +114,7 @@ module.exports = {
                                 && gamedata.players.get(gamedata.userids.get(gamedata.game.game.mayor)).isAlive) count++;
                             if (count > maxCount) {
                                 currentReaction = [emojiMap.get(emoji)];
-                                maxCount = emojiData.count;
+                                maxCount = count;
                             } else if (emojiData.count === maxCount) {
                                 currentReaction.push(emojiMap.get(emoji));
                             }
@@ -165,9 +165,9 @@ module.exports = {
                                         : [];
                                     let yayCount = yays.length;
                                     let nayCount = nays.length;
-                                    if (Array.from(votingEmojis.get("✅").users.cache.values()).includes(gamedata.game.game.mayor)
+                                    if (user.role !== "Mayor" || Array.from(votingEmojis.get("✅").users.cache.values()).includes(gamedata.game.game.mayor)
                                         && gamedata.players.get(gamedata.userids.get(gamedata.game.game.mayor)).isAlive) yayCount++;
-                                    if (Array.from(votingEmojis.get("❌").users.cache.values()).includes(gamedata.game.game.mayor)
+                                    if (user.role !== "Mayor" || Array.from(votingEmojis.get("❌").users.cache.values()).includes(gamedata.game.game.mayor)
                                         && gamedata.players.get(gamedata.userids.get(gamedata.game.game.mayor)).isAlive) nayCount++;
                                     let votingResult = yayCount > nayCount;
                                     if (yays.length === 0) {
@@ -319,14 +319,14 @@ module.exports = {
                                 );
                             await channel.send(vigilanteKillMsg);
                             break;
-                            case "Mayor":
-                                let mayorRevealMsg = new Discord.MessageEmbed()
-                                    .setColor("#1e8c00")
-                                    .setTitle(`${player.username} has revealed themselves as the **Mayor**!`)
-                                    .setDescription(`Mayor ${player.username} will now get to cast two votes in Town Hall Meetings.`);
-                                await channel.send(mayorRevealMsg);
-                                break;
-                            }
+                        case "Mayor":
+                            let mayorRevealMsg = new Discord.MessageEmbed()
+                                .setColor("#1e8c00")
+                                .setTitle(`${player.username} has revealed themselves as the **Mayor**!`)
+                                .setDescription(`Mayor ${player.username} will now get to cast two votes in Town Hall Meetings.`);
+                            await channel.send(mayorRevealMsg);
+                            break;
+                    }
                 }
 
                 if (mafia >= nonmafia || mafia === 0) {

@@ -17,6 +17,8 @@ module.exports = {
             message.guild.channels.resolve(category[0]).delete();
         }
         gamedata.players.clear();
+        gamedata.gameActive = false;
+        gamedata.gameReady = false;
         message.channel.send("Done.");
     },
 };

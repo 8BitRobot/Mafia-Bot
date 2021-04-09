@@ -630,7 +630,7 @@ class GameData {
                 prompt: (user) => {
                     return new Promise((resolve) => {
                         let that = this.villageRoles["Mayor"];
-                        if (this.players.get(user.id).silencedLastRound) that.revealed = false;
+                        if (this.players.get(this.userids.get(user.id)).silencedLastRound) that.revealed = false;
                         if (!that.revealed) {
                             let message = new Discord.MessageEmbed()
                                 .setColor("#1e8c00")
@@ -646,6 +646,7 @@ class GameData {
                                     time: this.settings.get("nightTime") * 1000,
                                 }).then((emoji) => {
                                     emoji = emoji.filter(t => t.count > 1);
+                                    let selection;
                                     let reaction;
                                     if (emoji.size === 0) {
                                         let noActionMessage = new Discord.MessageEmbed()
@@ -685,7 +686,6 @@ class GameData {
                                 })
                             } else resolve({})
                         })
-                        resolve({});
                     });
                 },
             },
