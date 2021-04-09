@@ -99,7 +99,7 @@ module.exports = {
                     let promptFilter = (reaction, tuser) => {
                         return Array.from(emojiMap.keys()).includes(reaction.emoji.name) && tuser.id !== "827754470825787413" && gamedata.userids.get(tuser.id) &&
                             gamedata.players.get(gamedata.userids.get(tuser.id)).isAlive &&
-                            !gamedata.players.get(gamedata.userids.get(tuser.id)).wasSilenced;
+                            !gamedata.players.get(gamedata.userids.get(tuser.id)).silencedThisRound;
                     };
                     prompt.awaitReactions(promptFilter, {
                         time: gamedata.settings.get("dayTime") * 1000,
@@ -132,7 +132,7 @@ module.exports = {
                                 promptFilter = (reaction, tuser) => {
                                     return ["✅", "❌"].includes(reaction.emoji.name) && tuser.id !== "827754470825787413" && gamedata.userids.get(tuser.id) &&
                                         gamedata.players.get(gamedata.userids.get(tuser.id)).isAlive &&
-                                        !gamedata.players.get(gamedata.userids.get(tuser.id)).wasSilenced &&
+                                        !gamedata.players.get(gamedata.userids.get(tuser.id)).silencedThisRound &&
                                         tuser.id !== gamedata.players.get(nominee).id;
                                 };
                                 votingPrompt.awaitReactions(promptFilter, {
@@ -140,13 +140,34 @@ module.exports = {
                                 }).then((votingEmojis) => {
                                     votingEmojis = votingEmojis.filter(t => t.count > 1);
 
-                                    let votingResult = (votingEmojis.get("✅") ?? {
-                                        count: 0,
-                                    }).count > (votingEmojis.get("❌") ?? {
-                                        count: 0,
-                                    }).count ? "✅" : undefined;
-                                    let yays = votingEmojis.get("✅") ? Array.from(votingEmojis.get("✅").users.cache.values()).filter(t => t.id !== "827754470825787413").map(t => `<@${t.id}>`).join("\n") : "None";
-                                    let nays = votingEmojis.get("❌") ? Array.from(votingEmojis.get("❌").users.cache.values()).filter(t => t.id !== "827754470825787413").map(t => `<@${t.id}>`).join("\n") : "None";
+                                    // let votingResult = (votingEmojis.get("✅") ?? {
+                                    //     count: 0,
+                                    // }).count > (votingEmojis.get("❌") ?? {
+                                    //     count: 0,
+                                    // }).count ? "✅" : undefined;
+
+                                    let user = gamedata.players.get(nominee);
+                                    let yays = votingEmojis.get("✅") 
+                                        ? Array.from(votingEmojis.get("✅").users.cache.values())
+                                            .filter(t => t.id !== "827754470825787413"
+                                                && t.id !== user.id
+                                                && gamedata.players.get(gamedata.userids.get(t.id)).isAlive)
+                                            .map(t => `<@${t.id}>`)
+                                        : [];
+                                    let nays = votingEmojis.get("❌")
+                                        ? Array.from(votingEmojis.get("❌").users.cache.values())
+                                            .filter(t => t.id !== "827754470825787413"
+                                                && t.id !== user.id
+                                                && gamedata.players.get(gamedata.userids.get(t.id)).isAlive)
+                                            .map(t => `<@${t.id}>`)
+                                        : [];
+                                    let votingResult = yays.length > nays.length;
+                                    if (yays.length === 0) {
+                                        yays = ["None"];
+                                    }
+                                    if (nays.length === 0) {
+                                        nays = ["None"];
+                                    }
                                     let votingResultMsg;
                                     if (!votingResult) {
                                         // votingResultMsg = `${nominee} was acquitted.`;
@@ -157,8 +178,10 @@ module.exports = {
                                             .addField("Guilty", yays, true)
                                             .addField("Innocent", nays, true);
                                     } else {
-                                        let user = gamedata.players.get(nominee);
                                         user.isAlive = false;
+                                        if (user.align === "Mafia" && gamedata.mafiaRoles[user.role].isGodfather) {
+                                            gamedata.mafiaRoles.updateGodfather(message.guild);
+                                        }
                                         gamedata.players.set(nominee, user);
                                         gamedata.game.game.playersAlive = gamedata.game.game.playersAlive.filter(player => player !== nominee);
                                         votingResultMsg = new Discord.MessageEmbed()
@@ -187,6 +210,14 @@ module.exports = {
                     let user = gamedata.userids.get(member.id);
                     let temp = gamedata.players.get(user);
                     temp.wasFramed = false;
+                    if (temp.silencedThisRound) {
+                        await gamedata.mafiaRoles["Silencer"].silence(message.guild, member.id);
+                        temp.silencedThisRound = false;
+                        temp.silencedLastRound = true;
+                    } else if (temp.silencedLastRound) {
+                        await gamedata.mafiaRoles["Silencer"].unsilence(message.guild, member.id);
+                        temp.silencedLastRound = false;
+                    }
                     gamedata.players.set(user, temp);
                     if (gamedata.players.get(user).isAlive) {
                         if (gamedata.players.get(user).align === "Mafia") {
@@ -195,7 +226,7 @@ module.exports = {
                             nonmafia++;
                         }
                     }
-                    if (!gamedata.players.get(user).isAlive || gamedata.players.get(user).wasSilenced) {
+                    if (!gamedata.players.get(user).isAlive) {
                         await message.guild.channels.resolve(gamedata.settings.get("textChannel")).updateOverwrite(member, {
                             SEND_MESSAGES: false,
                             SEND_TTS_MESSAGES: false,
@@ -221,9 +252,16 @@ module.exports = {
                 }
 
                 for (let member of users) {
-                    await member.voice.setChannel(gamedata.settings.get("townHall")).catch(() => { // WE ADDED AN AWAIT HERE, IF IT DOESNT WORK REMEMBER THIS
-                        channel.send(`**${gamedata.players.get(gamedata.userids.get(member.id)).username}** could not be moved to the **Town Hall Meeting**, please join manually.`);
-                    });
+                    let player = gamedata.players.get(gamedata.userids.get(member.id));
+                    if (player.silencedLastRound) {
+                        await member.voice.setChannel(player.vc).catch(() => {
+                            channel.send(`**${player.username}** could not be moved to the **Town Hall Meeting**, please join manually.`);
+                        });
+                    } else {
+                        await member.voice.setChannel(gamedata.settings.get("townHall")).catch(() => {
+                            channel.send(`**${player.username}** could not be moved to the **Town Hall Meeting**, please join manually.`);
+                        });
+                    }
                 }
                 let roundOverTitle = `Night ${round} is over!`;
                 if (gamedata.game.game.deadThisRound.length === 0) {
@@ -236,13 +274,17 @@ module.exports = {
                     .setTitle(roundOverTitle);
                 channel.send(roundOverMsg);
                 for (let death of gamedata.game.game.deadThisRound) {
+                    let player = gamedata.players.get(death.name);
+                    if (player.align === "Mafia" && gamedata.mafiaRoles[player.role].isGodfather) {
+                        gamedata.mafiaRoles.updateGodfather(message.guild);
+                    }
                     switch (death.by) {
                         case "Mafia":
                             let mafiaAttackMsg = new Discord.MessageEmbed()
                                 .setColor("#d50000")
                                 .attachFiles(["images/death.png"])
                                 .setThumbnail("attachment://death.png")
-                                .setTitle(`The Mafia attacked ${gamedata.players.get(death.name).username} last night!`);
+                                .setTitle(`The Mafia attacked ${player.username} last night!`);
                             if (gamedata.game.game.deadThisRound.filter(death => death.by === "Doctor").length === 0) {
                                 mafiaAttackMsg.setDescription("Unfortunately, the doctor was nowhere to be found.");
                             }
@@ -257,12 +299,12 @@ module.exports = {
                             await channel.send(doctorSaveMsg);
                             break;
                         case "Vigilante":
-                            let align = gamedata.players.get(death.name).align;
+                            let align = player.align;
                             let vigilanteKillMsg = new Discord.MessageEmbed()
                                 .setColor("#1e8c00")
                                 .attachFiles(["images/death.png"])
                                 .setThumbnail("attachment://death.png")
-                                .setTitle(`The vigilante shot ${gamedata.players.get(death.name).username}!`)
+                                .setTitle(`The vigilante shot ${player.username}!`)
                                 .setDescription(align === "Village" ?
                                     `Unfortunately, ${gamedata.players.get(death.name).username} was a **villager**. The vigilante, ${death.vigil}, committed suicide out of guilt.` :
                                     `${gamedata.players.get(death.name).username} was a **${align}**! The vigilante lives to shoot another day.`
@@ -273,7 +315,7 @@ module.exports = {
                 }
 
                 if (mafia >= nonmafia || mafia === 0) {
-                    resolve(true);
+                    // resolve(true);
                 } else {
                     let dayStartMsg = new Discord.MessageEmbed()
                         .setTitle(`You've arrived at Town Hall on Day ${round}.`)
@@ -284,12 +326,11 @@ module.exports = {
                     for (let player of gamedata.game.game.playersAlive) {
                         let temp = gamedata.players.get(player);
                         let id = temp.id;
-                        if (!temp.wasSilenced) {
+                        if (!temp.silencedLastRound) {
                             alive += `\n<@${id}>`;
                         } else {
                             silenced = `<@${id}>`;
-                            temp.wasSilenced = false;
-                            gamedata.players.set(player, temp);
+                            // gamedata.players.set(player, temp);
                         }
                     }
                     let playersDead = Array.from(gamedata.players.keys()).filter(a => !gamedata.game.game.playersAlive.includes(a)).map(tag => `<@${gamedata.players.get(tag).id}>`);
@@ -300,8 +341,6 @@ module.exports = {
                     dayStartMsg.addField("Present", alive ? alive : "None", true);
                     dayStartMsg.addField("Absent", dead ? dead : "None", true);
                     channel.send(dayStartMsg);
-
-                    console.log("BEFORE THE SETTIMEOUT");
 
                     setTimeout(() => {
                         daytimeVoting().then(() => {
@@ -334,7 +373,7 @@ module.exports = {
                 for (let player of gamedata.game.game.playersAlive) {
                     let temp = gamedata.players.get(player);
                     let id = temp.id;
-                    if (!temp.wasSilenced) {
+                    if (!temp.silencedThisRound) {
                         alive += `\n<@${id}>`;
                     }
                 }
@@ -363,7 +402,7 @@ module.exports = {
                         ["Distractor", "Village"],
                         // ["Jailer", "Village"],
                         ["Framer", "Mafia"],
-                        // ["Silencer", "Mafia"],
+                        ["Silencer", "Mafia"],
                         ["Godfather", "Mafia"],
                         ["Mafioso", "Mafia"],
                         // ["Bomber", "Neutral"],
@@ -373,7 +412,6 @@ module.exports = {
                         ["PI", "Village"],
                         ["Spy", "Village"],
                     ];
-
                     for (let role of orderOfActions) {
                         role = role[0];
                         if (!round.has(role)) {
@@ -427,6 +465,22 @@ module.exports = {
                                 temp.wasFramed = true;
                                 gamedata.players.set(action.choice, temp);
                                 break;
+                            case "silence":
+                                temp = gamedata.players.get(action.choice);
+                                temp.silencedThisRound = true;
+                                gamedata.players.set(action.choice, temp);
+                                message.guild.members.fetch(temp.id).then((user) => {
+                                    let silencedMsg = new Discord.MessageEmbed()
+                                        .setColor("#d50000")
+                                        .setTitle("Unfortunately, you were silenced by the mafia.")
+                                        .setDescription("You will be unable to participate in the Town Hall meeting today, and your fellow villagers will see that you were absent.");
+                                    user.send(silencedMsg);
+                                });
+                                gamedata.game.game.deadThisRound.push({
+                                    name: action.choice,
+                                    by: "Mafia",
+                                });
+                                break;
                             case "kill-vigil":
                                 let vigilante = gamedata.players.get(tag);
                                 if (!vigilante.isAlive) {
@@ -460,10 +514,6 @@ module.exports = {
                                             .setDescription(`You discover that you have made a grave error and shot a villager. After giving ${temp.username} a proper burial, you load your gun for one final shot: yourself.`);
                                         vigilante.isAlive = false;
                                         gamedata.players.set(tag, vigilante);
-                                        // gamedata.game.game.deadThisRound.push({
-                                        //     name: tag,
-                                        //     by: "Vigilante-Suicide",
-                                        // });
                                         gamedata.game.game.playersAlive = gamedata.game.game.playersAlive.filter(t => t !== tag);
                                     } else if (align === "Mafia") {
                                         vigilanteKillMsg = new Discord.MessageEmbed()
@@ -487,7 +537,6 @@ module.exports = {
                                 let suspect = gamedata.players.get(action.choice);
                                 message.guild.members.fetch(detective.id).then((user) => {
                                     let detectiveResultMsg;
-                                    console.log(suspect);
                                     if (suspect.align === "Mafia" || suspect.wasFramed) {
                                         detectiveResultMsg = new Discord.MessageEmbed()
                                             .setColor("#d50000")
@@ -500,6 +549,29 @@ module.exports = {
                                             .setDescription("You can tell the town, but keep in mind you may be putting a target on your back.");
                                     }
                                     user.send(detectiveResultMsg);
+                                });
+                                break;
+                            case "pi-check":
+                                let pi = gamedata.players.get(tag);
+                                if (!pi.isAlive) {
+                                    break;
+                                }
+                                let suspects = [gamedata.players.get(action.choice[0]), gamedata.players.get(action.choice[1])];
+                                message.guild.members.fetch(pi.id).then((user) => {
+                                    let piResultMsg;
+                                    let suspectsAreMafia = suspects.map(sus => sus.align === "Mafia" || sus.wasFramed);
+                                    if (suspectsAreMafia[0] === suspectsAreMafia[1]) {
+                                        piResultMsg = new Discord.MessageEmbed()
+                                            .setColor("#1e8c00")
+                                            .setTitle("Your investigation has revealed that both suspects are on the same side!")
+                                            .setDescription("However, you may not know which side that is. Keep that in mind when revealing your findings to the town.");
+                                    } else {
+                                        piResultMsg = new Discord.MessageEmbed()
+                                            .setColor("#d50000")
+                                            .setTitle("Your investigation has revealed that both suspects are on different sides!")
+                                            .setDescription("However, you still don't know which one is in the mafia, and it's possible that one was framed. Keep that in mind when revealing your findings to the town.");
+                                    }
+                                    user.send(piResultMsg);
                                 });
                                 break;
                             case "heal":

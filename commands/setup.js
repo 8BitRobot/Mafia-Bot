@@ -78,7 +78,7 @@ module.exports = {
                         tierMafiaRoles[3] = tierMafiaRoles[3].filter(v => v !== player.role);
                         break;
                 }
-                console.log(`${player.role.toLowerCase()}Roles`);
+                gamedata.mafiaRoles.currentMafia[player.role] = randPlayer;
                 player.roleMessage = new Discord.MessageEmbed()
                     .setColor("#d50000")
                     .setTitle(`You are the **${player.role}**`)
@@ -300,7 +300,6 @@ module.exports = {
                     });
                 });
             });
-
         }
         let village = createVillage();
         if (!village) {
