@@ -375,7 +375,7 @@ module.exports = {
                 }
                 intro.addField("Leaving the meeting:", alive, true);
                 channel.send(intro);
-                let round = new Map();
+                let roundByRole = new Map();
                 let i = 0;
                 let promises = [];
                 for (const [tag, player] of gamedata.players) {
@@ -385,12 +385,12 @@ module.exports = {
                         continue;
                     }
                     promises.push(gamedata[`${player.align.toLowerCase()}Roles`][player.role].night(user).then((result) => {
-                        round.set(player.role, [result, tag]);
+                        roundByRole.set(player.role, [result, tag]);
                     }));
                     i++;
                 }
                 Promise.all(promises).then(() => {
-                    gamedata.game.rounds.push(round);
+                    gamedata.game.rounds.push(roundByRole);
 
                     let killed;
 
@@ -410,10 +410,10 @@ module.exports = {
                     ];
                     for (let role of orderOfActions) {
                         role = role[0];
-                        if (!round.has(role)) {
+                        if (!roundByRole.has(role)) {
                             continue;
                         }
-                        let r = round.get(role);
+                        let r = roundByRole.get(role);
                         let action = r[0];
                         let tag = r[1];
                         if (!action.action) {
@@ -427,6 +427,8 @@ module.exports = {
                                 .setDescription("As a result, you were unable to do anything but sleep last night. Try again tomorrow!");
                             message.guild.members.resolve(actor.id).send(distractedMessage);
                             actor.distracted = false;
+                            continue;
+                        } else if (!actor.isAlive && actor.role !== "Doctor") {
                             continue;
                         }
                         let deadPerson;
@@ -447,12 +449,23 @@ module.exports = {
                                     name: deadPerson,
                                     by: "Mafia",
                                 });
+                                let mafioso = gamedata.mafiaRoles.currentMafia["Mafioso"];
+                                if (mafioso) {
+                                    let mafiosoMessage = new Discord.MessageEmbed()
+                                        .setColor("#d50000")
+                                        .setTitle(`The Godfather has ordered you to attack ${temp.username}.`);
+                                    message.guild.members.fetch(gamedata.players.get(mafioso).id).then((user) => {
+                                        user.send(mafiosoMessage);
+                                    });
+                                }
                                 gamedata.game.game.playersAlive = gamedata.game.game.playersAlive.filter(t => t !== deadPerson);
                                 message.guild.members.fetch(temp.id).then((user) => {
                                     let targetDeathMsg = new Discord.MessageEmbed()
                                         .setColor("#d50000")
                                         .setTitle("Unfortunately, you were attacked by the mafia.")
-                                        .setDescription(`You attempt to ${temp.role === "Doctor" ? "grab your first-aid kit!" : "summon the doctor using the Larkinville Emergency Line!"}`);
+                                        .setDescription(`You attempt to ${temp.role === "Doctor" ? "grab your first-aid kit!" : "summon the doctor using the Larkinville Emergency Line!"}`)
+                                        .attachFiles(["images/death.png"])
+                                        .setThumbnail("attachment://death.png");
                                     user.send(targetDeathMsg);
                                 });
                                 break;
@@ -479,9 +492,6 @@ module.exports = {
                                 break;
                             case "kill-vigil":
                                 let vigilante = gamedata.players.get(tag);
-                                if (!vigilante.isAlive) {
-                                    break;
-                                }
                                 deadPerson = action.choice;
                                 temp = gamedata.players.get(deadPerson);
                                 let align = temp.align;
@@ -527,9 +537,6 @@ module.exports = {
                                 break;
                             case "check":
                                 let detective = gamedata.players.get(tag);
-                                if (!detective.isAlive) {
-                                    break;
-                                }
                                 let suspect = gamedata.players.get(action.choice);
                                 message.guild.members.fetch(detective.id).then((user) => {
                                     let detectiveResultMsg;
@@ -549,9 +556,6 @@ module.exports = {
                                 break;
                             case "pi-check":
                                 let pi = gamedata.players.get(tag);
-                                if (!pi.isAlive) {
-                                    break;
-                                }
                                 let suspects = [gamedata.players.get(action.choice[0]), gamedata.players.get(action.choice[1])];
                                 message.guild.members.fetch(pi.id).then((user) => {
                                     let piResultMsg;
@@ -568,6 +572,45 @@ module.exports = {
                                             .setDescription("However, you still don't know which one is in the mafia, and it's possible that one was framed. Keep that in mind when revealing your findings to the town.");
                                     }
                                     user.send(piResultMsg);
+                                });
+                                break;
+                            case "spy-check":
+                                let spy = gamedata.players.get(tag);
+                                let selectionRole = gamedata.players.get(action.choice).role;
+                                let selectionVisit = "";
+                                if (Object.keys(roundByRole.get(selectionRole)[0]).length && ( // if the selection made a choice AND
+                                        selectionRole !== "Godfather"
+                                        || !gamedata.mafiaRoles.currentMafia["Mafioso"] // if the selection isn't godfather OR no mafioso exists, in which case it's okay if they're godfather
+                                    ) && (
+                                        selectionRole !== "Mafioso"
+                                        || gamedata.mafiaRoles["Mafioso"].isGodfather) // if the selection isn't mafioso OR the mafioso is the godfather, in which case it's okay if they're mafioso
+                                    ) {
+                                    selectionVisit = gamedata.players.get(roundByRole.get(selectionRole)[0].choice).username;
+                                } else if (selectionRole === "Mafioso") {
+                                    let godfatherChoice = roundByRole.get("Godfather")[0];
+                                    if (Object.keys(godfatherChoice).length) {
+                                        selectionVisit = gamedata.players.get(godfatherChoice.choice).username;
+                                    }
+                                }
+                                let spyMessage;
+                                if (selectionVisit === spy.username) {
+                                    spyMessage = new Discord.MessageEmbed()
+                                        .setColor("#d50000")
+                                        .setTitle(`You watched your target as they snooped around your own house!`)
+                                        .setDescription("See if you can figure out what they were doing there...");
+                                } else if (selectionVisit) {
+                                    spyMessage = new Discord.MessageEmbed()
+                                        .setColor("#d50000")
+                                        .setTitle(`You saw your target visiting ${selectionVisit}'s house.`)
+                                        .setDescription("See if you can figure out what they were doing there...");
+                                } else {
+                                    spyMessage = new Discord.MessageEmbed()
+                                        .setColor("#1e8c00")
+                                        .setTitle(`It seems your target didn't go anywhere last night.`)
+                                        .setDescription("Maybe that clears their name... or does it?");
+                                }
+                                message.guild.members.fetch(spy.id).then((user) => {
+                                    user.send(spyMessage);
                                 });
                                 break;
                             case "heal":

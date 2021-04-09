@@ -12,6 +12,7 @@ module.exports = {
                 id: message.author.id,
                 username: message.author.username,
                 role: undefined,
+                distracted: false,
                 wasFramed: false,
                 silencedLastRound: false,
                 silencedThisRound: false,

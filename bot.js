@@ -157,7 +157,7 @@ class GameData {
             },
             "Framer": {
                 align: "Mafia",
-                tier: 2,
+                tier: 3,
                 emojiMap: new Map(),
                 description: "You've moved up the ranks in the Larkinville Mafia due to your uncanny ability to alter the evidence. Your goal is to help the Mafia destroy the town by framing innocent villagers each night.",
                 isGodfather: false,
@@ -373,14 +373,37 @@ class GameData {
             },
             "Mafioso": {
                 align: "Mafia",
-                tier: 3,
+                tier: 2,
                 description: "",
-                prompt: (user) => {
-                    user.send("bruh");
-                },
+                isGodfather: false,
+                prompt: (user) => {},
                 night: (user) => {
                     return new Promise((resolve) => {
-                        resolve({});
+                        let that = this.mafiaRoles["Mafioso"];
+                        if (that.isGodfather) {
+                            that = this.mafiaRoles["Godfather"];
+                            that.prompt(user).then((selection) => {
+                                if (selection === "") {
+                                    resolve({});
+                                } else {
+                                    let action = {};
+                                    if (this.players.get(selection).role === "Baiter") {
+                                        action = {
+                                            action: "baited",
+                                            choice: this.userids.get(user.id),
+                                        };
+                                    } else if (this.mafiaRoles["Mafioso"].isGodfather) {
+                                        action = {
+                                            action: "kill",
+                                            choice: selection,
+                                        };
+                                    }
+                                    resolve(action);
+                                }
+                            });
+                        } else {
+                            resolve({});
+                        }
                     });
                 },
             },
@@ -389,7 +412,7 @@ class GameData {
         this.villageRoles = {
             "Doctor": {
                 align: "Village",
-                tier: 1,
+                tier: 5, // TODO change to 1
                 description: "You're the resident medical expert in Larkinville. Your job is to save those attacked by the Mafia.",
                 emojiMap: new Map(),
                 lastChoice: "",
@@ -601,7 +624,7 @@ class GameData {
             },
             "Mayor": {
                 align: "Village",
-                tier: 3,
+                tier: 6, // TODO change to 3
                 description: "",
                 prompt: (user) => {
                     user.send("bruh");
@@ -609,90 +632,6 @@ class GameData {
                 night: (user) => {
                     return new Promise((resolve) => {
                         resolve({});
-                    });
-                },
-            },
-            "PI": {
-                align: "Village",
-                tier: 4,
-                description: "",
-                emojiMap: new Map(),
-                prompt: (user) => {
-                    return new Promise((resolve) => {
-                        let that = this.villageRoles["PI"];
-                        that.emojiMap.clear();
-                        let i = 0;
-                        let message = new Discord.MessageEmbed()
-                            .setColor("#1e8c00")
-                            .setTitle(`Night ${this.game.game.currentRound}: Who do you want to investigate?`)
-                            .setDescription("Select TWO players using the reactions below:");
-                        for (let player of this.game.game.playersAlive.filter(t => t !== this.userids.get(user.id))) {
-                            that.emojiMap.set(this.emojiArray[i], player);
-                            message.addField(`${this.emojiArray[i]} ${player}`, "\u200B", false);
-                            i++;
-                        }
-                        let selection;
-                        user.send(message).then(async (prompt) => {
-                            for (let emoji of that.emojiMap.keys()) {
-                                prompt.react(emoji);
-                            }
-                            let promptFilter = (reaction, tuser) => {
-                                return Array.from(that.emojiMap.keys()).includes(reaction.emoji.name) && tuser.id === user.id;
-                            };
-                            prompt.awaitReactions(promptFilter, {
-                                time: this.settings.get("nightTime") * 1000,
-                            }).then((emoji) => {
-                                emoji = emoji.filter(t => t.count > 1);
-                                let reaction;
-                                if (emoji.size === 0) {
-                                    let noActionMessage = new Discord.MessageEmbed()
-                                        .setTitle("You chose not to investigate anyone tonight.")
-                                        .setColor("#1e8c00");
-                                    user.send(noActionMessage);
-                                    resolve("");
-                                } else if (emoji.size === 1) {
-                                    let noActionMessage = new Discord.MessageEmbed()
-                                        .setTitle("You didn't select enough people to investigate.")
-                                        .setColor("#1e8c00");
-                                    user.send(noActionMessage);
-                                    resolve("");
-                                } else {
-                                    console.log(emoji);
-                                    console.log(typeof emoji);
-                                    console.log(emoji.first(2));
-                                    let selections = [];
-                                    for (let e of emoji.first(2)) {
-                                        // console.log(e);
-                                        let reaction = e.emoji.name;
-                                        let selection = that.emojiMap.get(reaction);
-                                        selections.push(selection);
-                                    }
-                                    let selectionMessage = new Discord.MessageEmbed()
-                                        .setTitle(`You chose to investigate ${selections[0]} and ${selections[1]} tonight.`)
-                                        .setColor("#1e8c00");
-                                    user.send(selectionMessage);
-                                    resolve(selections);
-                                }
-                            });
-                        });
-                    });
-                },
-                night: (user) => {
-                    return new Promise((resolve) => {
-                        let that = this.villageRoles["PI"];
-                        that.prompt(user).then((selections) => {
-                            if (selections === "") {
-                                resolve({});
-                            } else {
-                                resolve([this.players.get(selections[0]).role, this.players.get(selections[1]).role].includes("Baiter") ? {
-                                    action: "baited",
-                                    choice: this.userids.get(user.id),
-                                } : {
-                                    action: "pi-check",
-                                    choice: selections,
-                                });
-                            }
-                        });
                     });
                 },
             },
@@ -790,16 +729,157 @@ class GameData {
                     });
                 },
             },
-            "Spy": {
+            "PI": {
                 align: "Village",
                 tier: 5,
                 description: "",
+                emojiMap: new Map(),
                 prompt: (user) => {
-                    user.send("bruh");
+                    return new Promise((resolve) => {
+                        let that = this.villageRoles["PI"];
+                        that.emojiMap.clear();
+                        let i = 0;
+                        let message = new Discord.MessageEmbed()
+                            .setColor("#1e8c00")
+                            .setTitle(`Night ${this.game.game.currentRound}: Who do you want to investigate?`)
+                            .setDescription("Select TWO players using the reactions below:");
+                        for (let player of this.game.game.playersAlive.filter(t => t !== this.userids.get(user.id))) {
+                            that.emojiMap.set(this.emojiArray[i], player);
+                            message.addField(`${this.emojiArray[i]} ${player}`, "\u200B", false);
+                            i++;
+                        }
+                        let selection;
+                        user.send(message).then(async (prompt) => {
+                            for (let emoji of that.emojiMap.keys()) {
+                                prompt.react(emoji);
+                            }
+                            let promptFilter = (reaction, tuser) => {
+                                return Array.from(that.emojiMap.keys()).includes(reaction.emoji.name) && tuser.id === user.id;
+                            };
+                            prompt.awaitReactions(promptFilter, {
+                                time: this.settings.get("nightTime") * 1000,
+                            }).then((emoji) => {
+                                emoji = emoji.filter(t => t.count > 1);
+                                let reaction;
+                                if (emoji.size === 0) {
+                                    let noActionMessage = new Discord.MessageEmbed()
+                                        .setTitle("You chose not to investigate anyone tonight.")
+                                        .setColor("#1e8c00");
+                                    user.send(noActionMessage);
+                                    resolve("");
+                                } else if (emoji.size === 1) {
+                                    let noActionMessage = new Discord.MessageEmbed()
+                                        .setTitle("You didn't select enough people to investigate.")
+                                        .setColor("#1e8c00");
+                                    user.send(noActionMessage);
+                                    resolve("");
+                                } else {
+                                    console.log(emoji);
+                                    console.log(typeof emoji);
+                                    console.log(emoji.first(2));
+                                    let selections = [];
+                                    for (let e of emoji.first(2)) {
+                                        // console.log(e);
+                                        let reaction = e.emoji.name;
+                                        let selection = that.emojiMap.get(reaction);
+                                        selections.push(selection);
+                                    }
+                                    let selectionMessage = new Discord.MessageEmbed()
+                                        .setTitle(`You chose to investigate ${selections[0]} and ${selections[1]} tonight.`)
+                                        .setColor("#1e8c00");
+                                    user.send(selectionMessage);
+                                    resolve(selections);
+                                }
+                            });
+                        });
+                    });
                 },
                 night: (user) => {
                     return new Promise((resolve) => {
-                        resolve({});
+                        let that = this.villageRoles["PI"];
+                        that.prompt(user).then((selections) => {
+                            if (selections === "") {
+                                resolve({});
+                            } else {
+                                resolve([this.players.get(selections[0]).role, this.players.get(selections[1]).role].includes("Baiter") ? {
+                                    action: "baited",
+                                    choice: this.userids.get(user.id),
+                                } : {
+                                    action: "pi-check",
+                                    choice: selections,
+                                });
+                            }
+                        });
+                    });
+                },
+            },
+            "Spy": {
+                align: "Village",
+                tier: 1, // TODO change to 4
+                emojiMap: new Map(),
+                description: "",
+                prompt: (user) => {
+                    return new Promise((resolve) => {
+                        let that = this.villageRoles["Spy"];
+                        that.emojiMap.clear();
+                        let i = 0;
+                        let message = new Discord.MessageEmbed()
+                            .setColor("#1e8c00")
+                            .setTitle(`Night ${this.game.game.currentRound}: Who do you want to watch?`)
+                            .setDescription("Select a player using the reactions below:");
+                        for (let player of this.game.game.playersAlive.filter(t => t !== this.userids.get(user.id))) {
+                            that.emojiMap.set(this.emojiArray[i], player);
+                            message.addField(`${this.emojiArray[i]} ${player}`, "\u200B", false);
+                            i++;
+                        }
+                        let selection;
+                        user.send(message).then(async (prompt) => {
+                            for (let emoji of that.emojiMap.keys()) {
+                                prompt.react(emoji);
+                            }
+                            let promptFilter = (reaction, tuser) => {
+                                return Array.from(that.emojiMap.keys()).includes(reaction.emoji.name) && tuser.id === user.id;
+                            };
+                            prompt.awaitReactions(promptFilter, {
+                                time: this.settings.get("nightTime") * 1000,
+                            }).then((emoji) => {
+                                emoji = emoji.filter(t => t.count > 1);
+                                let reaction;
+                                if (emoji.size === 0) {
+                                    let noActionMessage = new Discord.MessageEmbed()
+                                        .setTitle("You chose not to watch anyone tonight.")
+                                        .setColor("#1e8c00");
+                                    user.send(noActionMessage);
+                                    resolve("");
+                                } else {
+                                    reaction = emoji.first().emoji.name;
+                                    selection = that.emojiMap.get(reaction);
+                                    let selectionMessage = new Discord.MessageEmbed()
+                                        .setTitle(`You chose to watch ${selection} tonight.`)
+                                        .setColor("#1e8c00");
+                                    user.send(selectionMessage);
+                                    resolve(selection);
+                                }
+                            });
+                        });
+                    });
+                },
+                night: (user) => {
+                    return new Promise((resolve) => {
+                        let that = this.villageRoles["Spy"];
+                        that.prompt(user).then((selection) => {
+                            if (selection === "") {
+                                resolve({});
+                            } else {
+                                resolve(this.players.get(selection).role === "Baiter" ? {
+                                    action: "baited",
+                                    choice: this.userids.get(user.id),
+                                } : {
+                                    action: "spy-check",
+                                    choice: selection,
+                                });
+                            }
+                        });
                     });
                 },
             },

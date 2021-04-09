@@ -38,12 +38,11 @@ module.exports = {
                     neutralCount++;
                 }
             } else {
-                mafiaCount = 1;
+                mafiaCount = 2;
                 neutralCount = (gamedata.players.size < 5) ? 0 : 1;
             }
 
             let villagerCount = gamedata.players.size - mafiaCount - neutralCount;
-
 
             // Randomly assign each player to a role
 
@@ -120,15 +119,12 @@ module.exports = {
                         player.role = tierVillageRoles[3][0];
                         break;
                     case 4:
-                        player.role = tierVillageRoles[4][Math.floor(Math.random() * 3)];
-                        tierVillageRoles[4] = tierVillageRoles[4].filter(v => v !== player.role);
-                        break;
-                    case 5:
                         player.role = tierVillageRoles[4][Math.floor(Math.random() * 2)];
                         tierVillageRoles[4] = tierVillageRoles[4].filter(v => v !== player.role);
                         break;
-                    case 6:
+                    case 5:
                         player.role = tierVillageRoles[4][0];
+                        tierVillageRoles[4] = tierVillageRoles[4].filter(v => v !== player.role);
                         break;
                     default:
                         player.role = tierVillageRoles[5][Math.floor(Math.random() * tierVillageRoles.length)];
