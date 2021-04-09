@@ -17,6 +17,7 @@ class GameData {
         this.gameReady = false;
         this.game = {
             game: {
+                mayor: "",
                 playersAlive: [],
                 currentRound: 0,
                 deadThisRound: [],
@@ -602,11 +603,65 @@ class GameData {
                 align: "Village",
                 tier: 3,
                 description: "",
+                revealed: false,
                 prompt: (user) => {
-                    user.send("bruh");
+                    return new Promise((resolve) => {
+                        let that = this.villageRoles["Mayor"];
+                        if (this.players.get(user.id).silencedLastRound) that.revealed = false;
+                        if (!that.revealed) {
+                            let message = new Discord.MessageEmbed()
+                                .setColor("#1e8c00")
+                                .setTitle(`Night ${this.game.game.currentRound}: Do you want to reveal yourself as the mayor tomorrow?`)
+                                .setDescription("Select Y or N using the reactions below:");
+                            user.send(message).then(async(prompt) => {
+                                prompt.react("🇾");
+                                prompt.react("🇳");
+                                let promptFilter = (reaction, tuser) => {
+                                    return ["🇾", "🇳"].includes(reaction.emoji.name) && tuser.id === user.id;
+                                };
+                                prompt.awaitReactions(promptFilter, {
+                                    time: this.settings.get("nightTime") * 1000,
+                                }).then((emoji) => {
+                                    emoji = emoji.filter(t => t.count > 1);
+                                    let reaction;
+                                    if (emoji.size === 0) {
+                                        let noActionMessage = new Discord.MessageEmbed()
+                                            .setTitle("You will not reveal yourself tomorrow.")
+                                            .setColor("#cccccc");
+                                        user.send(noActionMessage);
+                                        resolve(false);
+                                    } else {
+                                        let selectionMessage;
+                                        reaction = emoji.first().emoji.name;
+                                        selection = reaction === "🇾";
+                                        if (selection) {
+                                            selectionMessage = new Discord.MessageEmbed()
+                                                .setTitle(`You have chosen to reveal yourself tomorrow.`)
+                                                .setColor("#1e8c00");
+                                            that.revealed = true;
+                                        } else {
+                                            selectionMessage = new Discord.MessageEmbed()
+                                                .setTitle(`You have chose not to reveal yourself tomorrow.`)
+                                                .setColor("#cccccc");
+                                        }
+                                        user.send(selectionMessage);
+                                        resolve(selection);
+                                    }
+                                })
+                            })
+                        } else resolve(false);
+                    })
                 },
                 night: (user) => {
                     return new Promise((resolve) => {
+                        let that = this.villageRoles["Mayor"];
+                        that.prompt(user).then((selection) => {
+                            if (selection) {
+                                resolve({
+                                    action: "mayor-reveal",
+                                })
+                            } else resolve({})
+                        })
                         resolve({});
                     });
                 },
