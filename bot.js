@@ -84,9 +84,23 @@ class GameData {
                 "Disguiser": "",
                 "Silencer": "",
             },
+            tiers: {
+                1: {
+                    roles: ["Godfather"],
+                    pick: false,
+                },
+                2: {
+                    roles: ["Framer", "Silencer"],
+                    pick: false,
+                },
+                3: {
+                    roles: ["Mafioso"],
+                    pick: false,
+                },
+                pool: [],
+            },
             "Godfather": {
                 description: "You're the leader of the Larkinville Mafia and order a murder each night. Your goal is to have all the townspeople killed.",
-                tier: 1,
                 align: "Mafia",
                 emojiMap: new Map(),
                 isGodfather: true,
@@ -157,7 +171,6 @@ class GameData {
             },
             "Framer": {
                 align: "Mafia",
-                tier: 3,
                 emojiMap: new Map(),
                 description: "You've moved up the ranks in the Larkinville Mafia due to your uncanny ability to alter the evidence. Your goal is to help the Mafia destroy the town by framing innocent villagers each night.",
                 isGodfather: false,
@@ -242,7 +255,6 @@ class GameData {
             },
             "Silencer": {
                 align: "Mafia",
-                tier: 3,
                 description: "",
                 emojiMap: new Map(),
                 isGodfather: false,
@@ -373,7 +385,6 @@ class GameData {
             },
             "Mafioso": {
                 align: "Mafia",
-                tier: 2,
                 description: "",
                 isGodfather: false,
                 prompt: (user) => {},
@@ -410,9 +421,27 @@ class GameData {
         };
 
         this.villageRoles = {
+            tiers: {
+                1: {
+                    roles: ["Doctor", "Detective"],
+                    pick: false
+                },
+                2: {
+                    roles: ["Vigilante", "Mayor"],
+                    pick: false,
+                },
+                3: {
+                    roles: ["Jailer", "Distractor"],
+                    pick: 1,
+                },
+                4: {
+                    roles: ["PI", "Spy"],
+                    pick: 1
+                },
+                pool: ["Jailer", "Distractor", "PI", "Spy"]
+            },
             "Doctor": {
                 align: "Village",
-                tier: 1,
                 description: "You're the resident medical expert in Larkinville. Your job is to save those attacked by the Mafia.",
                 emojiMap: new Map(),
                 lastChoice: "",
@@ -484,7 +513,6 @@ class GameData {
             },
             "Detective": {
                 align: "Village",
-                tier: 2,
                 description: "As the criminology expert in the Larkinville Police Department, you've been hard at work investigating recent murders each night. Your goal is to deduce the identities of the Mafia.",
                 emojiMap: new Map(),
                 prompt: (user) => {
@@ -554,7 +582,6 @@ class GameData {
             },
             "Vigilante": {
                 align: "Village",
-                tier: 3,
                 description: "",
                 emojiMap: new Map(),
                 prompt: (user) => {
@@ -624,7 +651,6 @@ class GameData {
             },
             "Mayor": {
                 align: "Village",
-                tier: 3,
                 description: "",
                 revealed: false,
                 prompt: (user) => {
@@ -691,7 +717,6 @@ class GameData {
             },
             "Jailer": {
                 align: "Village",
-                tier: 4,
                 description: "",
                 prompt: (user) => {
                     user.send("bruh");
@@ -704,7 +729,6 @@ class GameData {
             },
             "Distractor": {
                 align: "Village",
-                tier: 4,
                 description: "",
                 workedLastNight: false,
                 emojiMap: new Map(),
@@ -785,7 +809,6 @@ class GameData {
             },
             "PI": {
                 align: "Village",
-                tier: 5,
                 description: "",
                 emojiMap: new Map(),
                 prompt: (user) => {
@@ -869,7 +892,6 @@ class GameData {
             },
             "Spy": {
                 align: "Village",
-                tier: 4,
                 emojiMap: new Map(),
                 description: "",
                 prompt: (user) => {
@@ -940,6 +962,21 @@ class GameData {
         };
 
         this.neutralRoles = {
+            tiers: {
+                1: {
+                    roles: ["Executioner", "Jester"],
+                    pick: 1,
+                },
+                2: {
+                    roles: ["Baiter", "Bomber"],
+                    pick: 1,
+                },
+                3: {
+                    roles: ["Eternal"],
+                    pick: false,
+                },
+                pool: ["Baiter", "Bomber"]
+            },
             "Executioner": {
                 align: "Neutral",
                 tier: 1,
