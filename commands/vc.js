@@ -28,7 +28,7 @@ module.exports = {
                     sampleRate: 48000,
                     clearInterval: 1000
                 });
-
+                
                 voiceChannel.join().then(async (con) => {
                     const SILENCE_FRAME = Buffer.from([0xF8, 0xFF, 0xFE]);
                     class Silence extends Readable {
@@ -40,37 +40,22 @@ module.exports = {
                     con.play(new Silence(), {type: "opus"})
                     for (let member of Array.from(con.channel.members.values())) {
                         if (!member.user.bot) {
-                            let channelStream;
-                            channelStream = await con.receiver.createStream(member.id, {
+                            let channelStream = await con.receiver.createStream(member.id, {
                                 end: 'manual',
                                 mode: "pcm"
                             });
-                            users[member.user.tag] = {
-                                input: mixer.input({
+                            channelStream.on("data", (data) => {
+                                console.log(data)
+                            })
+                            var input = mixer.input({
                                     channels: 2,
                                     sampleRate: 48000,
                                     bitDepth: 16
-                                }),
-                                stream: channelStream
-                            }
-                            channelStream.on("data", (buf) => {
-                                console.log(member.user.tag, buf.byteLength / 4)
-                                if (buf.byteLength / 4 === 960 && !!users[member.user.tag].input) {
-                                    console.log("Adding Stream")
-                                    users[member.user.tag].stream.pipe(users[member.user.tag].input);
-                                    users[member.user.tag].input = undefined;
-                                    console.log("Added Stream", users[member.user.tag])
-                                }
-                            })
+                                })
+                            channelStream.pipe(input);
                         }
                     }
-                    var pass = stream.PassThrough()
-                    console.log(pass);
-                    mixer.pipe(pass);
-                    pass.on("data", (buf) => {
-                        console.log(`mixer buffer length: ${buf.byteLength / 4}`)
-                    })
-                    gamedata.settings.get("emit").emit("stream", pass);
+                    gamedata.settings.get("emit").emit("stream", mixer);
                 })
             }
         }
