@@ -412,7 +412,7 @@ class GameData {
         this.villageRoles = {
             "Doctor": {
                 align: "Village",
-                tier: 5, // TODO change to 1
+                tier: 1,
                 description: "You're the resident medical expert in Larkinville. Your job is to save those attacked by the Mafia.",
                 emojiMap: new Map(),
                 lastChoice: "",
@@ -624,7 +624,7 @@ class GameData {
             },
             "Mayor": {
                 align: "Village",
-                tier: 6, // TODO change to 3
+                tier: 3,
                 description: "",
                 revealed: false,
                 prompt: (user) => {
@@ -869,7 +869,7 @@ class GameData {
             },
             "Spy": {
                 align: "Village",
-                tier: 1, // TODO change to 4
+                tier: 4,
                 emojiMap: new Map(),
                 description: "",
                 prompt: (user) => {
