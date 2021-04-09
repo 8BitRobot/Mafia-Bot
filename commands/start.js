@@ -109,7 +109,10 @@ module.exports = {
                         let maxCount = 0;
                         let currentReaction = [];
                         for (let [emoji, emojiData] of emojis) {
-                            if (emojiData.count > maxCount) {
+                            var count = emojiData.count;
+                            if (Array.from(emojiData.users.cache.values()).map(t => t.id).includes(gamedata.game.game.mayor) 
+                                && gamedata.players.get(gamedata.userids.get(gamedata.game.game.mayor)).isAlive) count++;
+                            if (count > maxCount) {
                                 currentReaction = [emojiMap.get(emoji)];
                                 maxCount = emojiData.count;
                             } else if (emojiData.count === maxCount) {
@@ -138,8 +141,6 @@ module.exports = {
                                 votingPrompt.awaitReactions(promptFilter, {
                                     time: gamedata.settings.get("dayTime") * 1000,
                                 }).then((votingEmojis) => {
-                                    votingEmojis = votingEmojis.filter(t => t.count > 1);
-
                                     // let votingResult = (votingEmojis.get("✅") ?? {
                                     //     count: 0,
                                     // }).count > (votingEmojis.get("❌") ?? {
@@ -147,21 +148,28 @@ module.exports = {
                                     // }).count ? "✅" : undefined;
 
                                     let user = gamedata.players.get(nominee);
-                                    let yays = votingEmojis.get("✅") 
+
+                                    let yays = votingEmojis.get("✅")
                                         ? Array.from(votingEmojis.get("✅").users.cache.values())
                                             .filter(t => t.id !== "827754470825787413"
                                                 && t.id !== user.id
                                                 && gamedata.players.get(gamedata.userids.get(t.id)).isAlive)
-                                            .map(t => `<@${t.id}>`)
+                                            .map(t => `<@${t.id}>${gamedata.game.game.mayor === t.id ? " (Mayor)" : ""}`)
                                         : [];
                                     let nays = votingEmojis.get("❌")
                                         ? Array.from(votingEmojis.get("❌").users.cache.values())
                                             .filter(t => t.id !== "827754470825787413"
                                                 && t.id !== user.id
                                                 && gamedata.players.get(gamedata.userids.get(t.id)).isAlive)
-                                            .map(t => `<@${t.id}>`)
+                                            .map(t => `<@${t.id}>${gamedata.game.game.mayor === t.id ? " (Mayor)" : ""}`)
                                         : [];
-                                    let votingResult = yays.length > nays.length;
+                                    let yayCount = yays.length;
+                                    let nayCount = nays.length;
+                                    if (Array.from(votingEmojis.get("✅").users.cache.values()).includes(gamedata.game.game.mayor)
+                                        && gamedata.players.get(gamedata.userids.get(gamedata.game.game.mayor)).isAlive) yayCount++;
+                                    if (Array.from(votingEmojis.get("❌").users.cache.values()).includes(gamedata.game.game.mayor)
+                                        && gamedata.players.get(gamedata.userids.get(gamedata.game.game.mayor)).isAlive) nayCount++;
+                                    let votingResult = yayCount > nayCount;
                                     if (yays.length === 0) {
                                         yays = ["None"];
                                     }
@@ -239,6 +247,10 @@ module.exports = {
                             VIEW_CHANNEL: true,
                             SPEAK: true
                         });
+                        await message.guild.channels.resolve(gamedata.settings.get("ghostChat")).updateOverwrite(member, {
+                            VIEW_CHANNEL: true,
+                            SPEAK: true
+                        });
                         if (gamedata.players.get(user).align === "Mafia") {
                             await message.guild.channels.resolve(gamedata.settings.get("mafiaHouse")).updateOverwrite(member, {
                                 VIEW_CHANNEL: false,
@@ -307,7 +319,14 @@ module.exports = {
                                 );
                             await channel.send(vigilanteKillMsg);
                             break;
-                    }
+                            case "Mayor":
+                                let mayorRevealMsg = new Discord.MessageEmbed()
+                                    .setColor("#1e8c00")
+                                    .setTitle(`${player.username} has revealed themselves as the **Mayor**!`)
+                                    .setDescription(`Mayor ${player.username} will now get to cast two votes in Town Hall Meetings.`);
+                                await channel.send(mayorRevealMsg);
+                                break;
+                            }
                 }
 
                 if (mafia >= nonmafia || mafia === 0) {
@@ -674,6 +693,16 @@ module.exports = {
                                 }
                                 killed = null;
                                 break;
+                            case "mayor-reveal":
+                                mayor = gamedata.players.get(tag);
+                                if (!mayor.silencedThisRound) {
+                                    gamedata.game.game.deadThisRound.push({
+                                        by: "Mayor",
+                                        name: tag
+                                    })
+                                    gamedata.game.game.mayor = mayor.id;
+                                }
+                                break;
                             case "baited":
 
                                 break;
@@ -690,7 +719,7 @@ module.exports = {
 
         function nightTime(round) {
             return new Promise((resolve) => {
-                // spectatorClient.resolveID(gamedata.settings.get("ghostTown"))
+                console.log("night time");
                 for (let member of users) {
                     member.voice.setChannel(gamedata.players.get(gamedata.userids.get(member.id)).vc).catch(() => {
                         channel.send(`**${gamedata.players.get(gamedata.userids.get(member.id)).username}** could not be moved to **their home**, please join manually.`);

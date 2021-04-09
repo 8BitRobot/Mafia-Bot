@@ -1,4 +1,7 @@
 const fs = require('fs')
+const stream = require('stream')
+const AudioMixer = require('audio-mixer')
+const { OpusEncoder } = require('@discordjs/opus')
 
 module.exports = {
     name: "vc",
@@ -9,20 +12,41 @@ module.exports = {
         for (let [_, channel] of message.guild.channels.cache) {
             if (Array.from(channel.members.values()).map(u => u.id).includes(user.id) && channel.type === "voice") {
                 voiceChannel = message.guild.channels.resolve(channel.id);
-                console.log(voiceChannel)
-                voiceChannel.join().then((con) => {
-                    let streams = []
+                let i = 0;
+                let mixer = new AudioMixer.Mixer({
+                    channels: 1,
+                    bitDepth: 16,
+                    sampleRate: 48000,
+                    clearInterval: 20
+                });
+                
+                voiceChannel.join().then(async (con) => {
+                    let channelStream;
                     for (let member of Array.from(con.channel.members.values())) {
                         if (!member.user.bot) {
-                            var stream = con.receiver.createStream(member.id, {end: 'manual', type: "opus"});
-                            console.log(stream);
-                            streams.push(stream);
+                            channelStream = await con.receiver.createStream(member.id, {
+                                end: 'manual',
+                                mode: "pcm"
+                            });
+                            var input = await mixer.input({
+                                channels: 1,
+                                sampleRate: 48000,
+                                bitDepth: 16
+                            })
+                            console.log(member.user.tag)
+                            await channelStream.pipe(input);
                         }
                     }
-                    gamedata.settings.get("emit").emit("stream", streams);
+                    var pass = stream.PassThrough()
+                    mixer.pipe(pass);
+                    var encoder = new OpusEncoder(48000, 2)
+                    pass.on("data", (buf) => {
+                        console.log(buf.byteLength)
+                        // console.log(encoder.encode(buf))
+                    })
+                    gamedata.settings.get("emit").emit("stream", pass);
                 })
             }
         }
-
     },
 };
