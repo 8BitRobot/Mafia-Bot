@@ -4,7 +4,10 @@ const spectatorClient = new Discord.Client();
 const config = require("./config.json");
 const spectatorConfig = require("./spectatorConfig.json");
 const fs = require("fs");
-const { StreamInput, StreamOutput } = require('fluent-ffmpeg-multistream')
+const {
+    StreamInput,
+    StreamOutput
+} = require('fluent-ffmpeg-multistream')
 
 const prefix = "m.";
 
@@ -662,7 +665,7 @@ class GameData {
                                 .setColor("#1e8c00")
                                 .setTitle(`Night ${this.game.game.currentRound}: Do you want to reveal yourself as the mayor tomorrow?`)
                                 .setDescription("Select Y or N using the reactions below:");
-                            user.send(message).then(async(prompt) => {
+                            user.send(message).then(async (prompt) => {
                                 prompt.react("🇾");
                                 prompt.react("🇳");
                                 let promptFilter = (reaction, tuser) => {
@@ -962,27 +965,28 @@ class GameData {
         };
 
         this.neutralRoles = {
+            players: [],
             tiers: {
                 1: {
-                    roles: ["Executioner", "Jester"],
+                    roles: ["Jester"], // TODO: add Executioner
                     pick: 1,
                 },
                 2: {
-                    roles: ["Baiter", "Bomber"],
+                    roles: ["Baiter", "Arsonist"],
                     pick: 1,
                 },
                 3: {
                     roles: ["Eternal"],
                     pick: false,
                 },
-                pool: ["Baiter", "Bomber"]
+                pool: ["Baiter", "Arsonist"]
             },
             "Executioner": {
                 align: "Neutral",
-                tier: 1,
                 description: "",
                 target: "",
                 wasLynched: false,
+                isJester: false,
                 prompt: (user) => {
                     user.send("bruh");
                 },
@@ -991,28 +995,37 @@ class GameData {
                         resolve({});
                     });
                 },
-                win: (lynched) => {},
+                win: (user, dead, byLynch) => {}, // RESOLVE FORMAT: { role: <role>, win: [, <win condition satisfied>, <win condition exclusive>]}
             },
             "Jester": {
                 align: "Neutral",
-                tier: 1,
                 description: "",
                 wasLynched: false,
-                prompt: (user) => {
-                    user.send("bruh");
-                },
+                prompt: (user) => {},
                 night: (user) => {
                     return new Promise((resolve) => {
                         resolve({});
                     });
                 },
-                win: (lynched) => {
-
+                win: (user, dead, byLynch) => {
+                    return new Promise((resolve) => {
+                        let jester = this.userids.get(this.players.get(user).id);
+                        if (jester === dead && byLynch) {
+                            resolve({
+                                role: "Jester",
+                                win: [true, true],
+                            });
+                        } else {
+                            resolve({
+                                role: "Jester",
+                                win: [false, true],
+                            });
+                        }
+                    });
                 },
             },
             "Eternal": {
                 align: "Neutral",
-                tier: 2,
                 description: "",
                 newAlign: "",
                 prompt: (user) => {
@@ -1026,7 +1039,6 @@ class GameData {
             },
             "Baiter": {
                 align: "Neutral",
-                tier: 2,
                 description: "",
                 prompt: (user) => {
                     user.send("bruh");
@@ -1037,18 +1049,94 @@ class GameData {
                     });
                 },
             },
-            "Bomber": {
+            "Arsonist": {
                 align: "Neutral",
-                tier: 2,
                 description: "",
+                emojiMap: new Map(),
+                doused: [],
                 prompt: (user) => {
-                    user.send("bruh");
+                    return new Promise((resolve) => {
+                        let that = this.neutralRoles["Arsonist"];
+                        that.emojiMap.clear();
+                        let i = 0;
+                        let message = new Discord.MessageEmbed()
+                            .setColor("#d50000")
+                            .setTitle(`Night ${this.game.game.currentRound}: Who do you want to douse?`)
+                            .setDescription("Select a player to douse or ignite all previously doused players using the reactions below:");
+                        for (let player of this.game.game.playersAlive.filter(t => !that.doused.includes(t) && this.players.get(t).isAlive)) {
+                            that.emojiMap.set(this.emojiArray[i], player);
+                            message.addField(`${this.emojiArray[i]} ${this.players.get(player).id === user.id ? " (Ignite)" : player}`, "\u200B", false);
+                            i++;
+                        }
+                        let selection;
+                        user.send(message).then(async (prompt) => {
+                            for (let emoji of that.emojiMap.keys()) {
+                                prompt.react(emoji);
+                            }
+                            let promptFilter = (reaction, tuser) => {
+                                return Array.from(that.emojiMap.keys()).includes(reaction.emoji.name) && tuser.id === user.id;
+                            };
+                            prompt.awaitReactions(promptFilter, {
+                                time: this.settings.get("nightTime") * 1000,
+                            }).then((emoji) => {
+                                emoji = emoji.filter(t => t.count > 1);
+                                let reaction;
+                                if (emoji.size === 0) {
+                                    let noActionMessage = new Discord.MessageEmbed()
+                                        .setTitle("You chose not to douse anyone tonight.")
+                                        .setColor("#d50000");
+                                    user.send(noActionMessage);
+                                    resolve("");
+                                } else {
+                                    if (this.players.get(selection).id !== user.id) that.doused.push(selection);
+                                    reaction = emoji.first().emoji.name;
+                                    selection = that.emojiMap.get(reaction);
+                                    let selectionMessage = new Discord.MessageEmbed()
+                                        .setTitle(this.players.get(selection).id === user.id ? "You chose to ignite all previously doused players tonight" : `You chose to douse ${selection} tonight.`)
+                                        .setColor("#d50000");
+                                    user.send(selectionMessage);
+                                    resolve(selection);
+                                }
+                            });
+                        });
+                    });
                 },
                 night: (user) => {
                     return new Promise((resolve) => {
-                        resolve({})
+                        let that = this.neutralRoles["Arsonist"];
+                        that.prompt(user).then((selection) => {
+                            if (selection === "") {
+                                resolve({});
+                            } else {
+                                resolve(this.players.get(selection).role === "Baiter" ? {
+                                    action: "baited",
+                                    choice: this.userids.get(user.id),
+                                } : this.players.get(selection).id === user.id ? {
+                                    action: "ignite",
+                                    choice: selection
+                                } : {
+                                    action: "douse",
+                                    choice: selection,
+                                });
+                            }
+                        });
                     });
                 },
+                win: (user, _, byLynch) => {
+                    return new Promise((resolve) => {
+                        if (this.playersAlive.length === 1 && this.players.get(user).isAlive)  {
+                            resolve({
+                                role: "Arsonist",
+                                win: [true, true]
+                            })
+                        } else {
+                            resolve({
+                                role: "Arsonist",
+                                win: [false, true]
+                            })
+                        }
+                    })
+                }
             },
         };
     }
@@ -1068,6 +1156,7 @@ client.once("ready", () => {
 });
 
 const EventEmitter = require("events");
+const { resolve } = require("path");
 class MyEmitter extends EventEmitter {}
 const emit = new MyEmitter();
 gamedata.settings.set("emit", emit);
@@ -1116,7 +1205,9 @@ spectatorClient.once("ready", () => {
         // stream.on("data", (data) => {
         //     console.log(data);
         // })
-        connection.play(stream, {type: "converted"});
+        connection.play(stream, {
+            type: "converted"
+        });
     });
 });
 

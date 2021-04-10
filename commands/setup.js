@@ -140,6 +140,7 @@ module.exports = {
                 playersList = playersList.filter(v => v !== randPlayer);
                 let player = gamedata.players.get(randPlayer);
                 player.align = "Neutral";
+                gamedata.neutralRoles.players.push(randPlayer);
                 
                 if (!currentTierObject[currentTier]) {
                     player.role = rolePool[Math.floor(Math.random() * rolePool.length)];

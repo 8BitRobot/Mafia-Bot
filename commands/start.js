@@ -110,8 +110,8 @@ module.exports = {
                         let currentReaction = [];
                         for (let [emoji, emojiData] of emojis) {
                             var count = emojiData.count;
-                            if (Array.from(emojiData.users.cache.values()).map(t => t.id).includes(gamedata.game.game.mayor) 
-                                && gamedata.players.get(gamedata.userids.get(gamedata.game.game.mayor)).isAlive) count++;
+                            if (Array.from(emojiData.users.cache.values()).map(t => t.id).includes(gamedata.game.game.mayor) &&
+                                gamedata.players.get(gamedata.userids.get(gamedata.game.game.mayor)).isAlive) count++;
                             if (count > maxCount) {
                                 currentReaction = [emojiMap.get(emoji)];
                                 maxCount = count;
@@ -121,7 +121,7 @@ module.exports = {
                         }
                         if (currentReaction.length !== 1 || (maxCount - 1) <= gamedata.game.game.playersAlive.length / 2.4) {
                             channel.send(new Discord.MessageEmbed().setTitle("The vote was inconclusive!"));
-                            resolve();
+                            resolve([false]);
                         } else {
                             let nominee = currentReaction[0];
                             let votingMsg = new Discord.MessageEmbed()
@@ -149,20 +149,20 @@ module.exports = {
 
                                     let user = gamedata.players.get(nominee);
 
-                                    let yays = votingEmojis.get("✅")
-                                        ? Array.from(votingEmojis.get("✅").users.cache.values())
-                                            .filter(t => t.id !== "827754470825787413"
-                                                && t.id !== user.id
-                                                && gamedata.players.get(gamedata.userids.get(t.id)).isAlive)
-                                            .map(t => t.id)
-                                        : [];
-                                    let nays = votingEmojis.get("❌")
-                                        ? Array.from(votingEmojis.get("❌").users.cache.values())
-                                            .filter(t => t.id !== "827754470825787413"
-                                                && t.id !== user.id
-                                                && gamedata.players.get(gamedata.userids.get(t.id)).isAlive
-                                            ).map(t => t.id)
-                                        : [];
+                                    let yays = votingEmojis.get("✅") ?
+                                        Array.from(votingEmojis.get("✅").users.cache.values())
+                                        .filter(t => t.id !== "827754470825787413" &&
+                                            t.id !== user.id &&
+                                            gamedata.players.get(gamedata.userids.get(t.id)).isAlive)
+                                        .map(t => t.id) :
+                                        [];
+                                    let nays = votingEmojis.get("❌") ?
+                                        Array.from(votingEmojis.get("❌").users.cache.values())
+                                        .filter(t => t.id !== "827754470825787413" &&
+                                            t.id !== user.id &&
+                                            gamedata.players.get(gamedata.userids.get(t.id)).isAlive
+                                        ).map(t => t.id) :
+                                        [];
                                     let yayCount = yays.length;
                                     let nayCount = nays.length;
                                     if (gamedata.villageRoles["Mayor"].revealed && gamedata.players.get(gamedata.userids.get(gamedata.game.game.mayor)).isAlive) {
@@ -202,7 +202,7 @@ module.exports = {
                                             .addField("Innocent", nays, true);
                                     }
                                     channel.send(votingResultMsg).then(() => {
-                                        resolve();
+                                        resolve([votingResult, nominee]);
                                     });
                                 });
                             });
@@ -212,10 +212,53 @@ module.exports = {
             });
         }
 
+        function checkWin(dead, afterVote) {
+            return new Promise((resolve) => {
+                let neutralWinChecks = [];
+                if (dead) {
+                    for (let i of gamedata.neutralRoles.players) {
+                        neutralWinChecks.push(gamedata.neutralRoles[user.role].win(i, dead, afterVote))
+                    }
+                }
+                Promise.all(neutralWinChecks).then((results) => {
+                    let win;
+                    let winsNotExclusive = [];
+                    for (let i of results) {
+                        if (i.win[0] && i.win[1]) { // win[0] = whether role won, win[1] = whether win is exclusive
+                            win = i.role;
+                            break;
+                        } else if (i.win[0]) {
+                            winsNotExclusive.push(i.role);
+                        }
+                    }
+                    if (!win) {
+                        nonmafia = 0;
+                        mafia = 0;
+                        for (const [_, player] of gamedata.players) {
+                            if (player.isAlive) {
+                                if (player.align === "Mafia") {
+                                    mafia++;
+                                } else {
+                                    nonmafia++;
+                                }
+                            }
+                        }
+                        if (mafia >= nonmafia) {
+                            resolve(["mafia", true, winsNotExclusive]);
+                        } else if (mafia === 0) {
+                            resolve("village", true, winsNotExclusive);
+                        } else {
+                            resolve(["", false]);
+                        }
+                    } else {
+                        resolve(["neutral", true, win])
+                    }
+                });
+            });
+        }
+
         function dayTime(round) {
             return new Promise(async (resolve) => {
-                nonmafia = 0;
-                mafia = 0;
                 for (let member of users) {
                     let user = gamedata.userids.get(member.id);
                     let temp = gamedata.players.get(user);
@@ -229,13 +272,6 @@ module.exports = {
                         temp.silencedLastRound = false;
                     }
                     gamedata.players.set(user, temp);
-                    if (gamedata.players.get(user).isAlive) {
-                        if (gamedata.players.get(user).align === "Mafia") {
-                            mafia++;
-                        } else {
-                            nonmafia++;
-                        }
-                    }
                     if (!gamedata.players.get(user).isAlive) {
                         await message.guild.channels.resolve(gamedata.settings.get("textChannel")).updateOverwrite(member, {
                             SEND_MESSAGES: false,
@@ -328,12 +364,21 @@ module.exports = {
                                 .setDescription(`Mayor ${player.username} will now get to cast two votes in Town Hall Meetings.`);
                             await channel.send(mayorRevealMsg);
                             break;
+                        case "Arsonist":
+                            let arsonistBurnMsg = new Discord.MessageEmbed()
+                                .setColor("#d50000")
+                                .setTitle("Some people just want to watch the world burn.")
+                                .setDescription(`The arsonist burned ${death.killed.length} home${death.killed.length === 1 ? "" : "s"} last night. The CSI identified the following bodies:`)
+                                .addField("Arsonist's Damage Report", death.killed.map(t => `<@${t.id}>`).join("\n"))
+                            await channel.send(arsonistBurnMsg)
+                            break;
                     }
                 }
-
-                if (mafia >= nonmafia || mafia === 0) {
-                    // resolve(true);
-                } else {
+                checkWin("none", false).then((winResult) => {
+                    if (winResult[1]) {
+                        resolve(winResult);
+                    }
+                }).then(() => {
                     let dayStartMsg = new Discord.MessageEmbed()
                         .setTitle(`You've arrived at Town Hall on Day ${round}.`)
                         .setDescription("Here's the attendance for today's meeting:");
@@ -347,7 +392,6 @@ module.exports = {
                             alive += `\n<@${id}>`;
                         } else {
                             silenced = `<@${id}>`;
-                            // gamedata.players.set(player, temp);
                         }
                     }
                     let playersDead = Array.from(gamedata.players.keys()).filter(a => !gamedata.game.game.playersAlive.includes(a)).map(tag => `<@${gamedata.players.get(tag).id}>`);
@@ -360,22 +404,13 @@ module.exports = {
                     channel.send(dayStartMsg);
 
                     setTimeout(() => {
-                        daytimeVoting().then(() => {
-                            nonmafia = 0;
-                            mafia = 0;
-                            for (const [_, player] of gamedata.players) {
-                                if (player.isAlive) {
-                                    if (player.align === "Mafia") {
-                                        mafia++;
-                                    } else {
-                                        nonmafia++;
-                                    }
-                                }
-                            }
-                            resolve(mafia >= nonmafia || mafia === 0);
+                        daytimeVoting().then((result) => {
+                            checkWin(result, true).then((winResult) => {
+                                resolve(winResult);
+                            });
                         });
                     }, gamedata.settings.get(dayTime) * 1000);
-                }
+                });
             });
         }
 
@@ -422,8 +457,8 @@ module.exports = {
                         ["Silencer", "Mafia"],
                         ["Godfather", "Mafia"],
                         ["Mafioso", "Mafia"],
-                        // ["Bomber", "Neutral"],
                         ["Doctor", "Village"],
+                        // ["Arsonist", "Neutral"],
                         ["Vigilante", "Village"],
                         ["Detective", "Village"],
                         ["PI", "Village"],
@@ -517,6 +552,13 @@ module.exports = {
                                 deadPerson = action.choice;
                                 temp = gamedata.players.get(deadPerson);
                                 let align = temp.align;
+                                if (!temp.isAlive) {
+                                    let targetDeadMsg = new Discord.MessageEmbed()
+                                        .setColor("#d50000")
+                                        .setTitle("Your target was found dead at their home when you arrived!")
+                                    user.send(targetDeadMsg);
+                                    break;
+                                }
                                 temp.isAlive = false;
                                 gamedata.players.set(deadPerson, temp);
                                 gamedata.game.game.deadThisRound.push({
@@ -601,12 +643,12 @@ module.exports = {
                                 let selectionRole = gamedata.players.get(action.choice).role;
                                 let selectionVisit = "";
                                 if (Object.keys(roundByRole.get(selectionRole)[0]).length && ( // if the selection made a choice AND
-                                        selectionRole !== "Godfather"
-                                        || !gamedata.mafiaRoles.currentMafia["Mafioso"] // if the selection isn't godfather OR no mafioso exists, in which case it's okay if they're godfather
+                                        selectionRole !== "Godfather" ||
+                                        !gamedata.mafiaRoles.currentMafia["Mafioso"] // if the selection isn't godfather OR no mafioso exists, in which case it's okay if they're godfather
                                     ) && (
-                                        selectionRole !== "Mafioso"
-                                        || gamedata.mafiaRoles["Mafioso"].isGodfather) // if the selection isn't mafioso OR the mafioso is the godfather, in which case it's okay if they're mafioso
-                                    ) {
+                                        selectionRole !== "Mafioso" ||
+                                        gamedata.mafiaRoles["Mafioso"].isGodfather) // if the selection isn't mafioso OR the mafioso is the godfather, in which case it's okay if they're mafioso
+                                ) {
                                     selectionVisit = gamedata.players.get(roundByRole.get(selectionRole)[0].choice).username;
                                 } else if (selectionRole === "Mafioso") {
                                     let godfatherChoice = roundByRole.get("Godfather")[0];
@@ -714,6 +756,24 @@ module.exports = {
                                     })
                                 }
                                 break;
+                            case "douse":
+                                break;
+                            case "ignite":
+                                for (player of gamedata.neutralRoles["Arsonist"].doused) {
+                                    temp = gamedata.players.get(player);
+                                    temp.isAlive = false;
+                                    gamedata.players.set(player, temp);
+                                    gamedata.game.game.playersAlive = gamedata.game.game.playersAlive.filter(t => t !== player);
+                                    let arsonistVictimMsg = new Discord.MessageEmbed()
+                                        .setTitle("Oh no! Your house burned down while you were asleep!")
+                                        .setDescription("Now that you are dead you can spectate the rest of the game, but you can no longer speak or perform any nightly actions. Please refrain from communicating with living players via video or DMs.")
+                                }
+                                gamedata.game.game.deadThisRound.push({
+                                    name: tag,
+                                    by: "Arsonist",
+                                    killed: gamedata.neutralRoles["Arsonist"].doused
+                                })
+                                break;
                             case "baited":
                                 break;
                             default:
@@ -741,15 +801,14 @@ module.exports = {
                 });
             });
         }
-
+        let gameOver;
         for (let i = 1; nonmafia > mafia; i++) {
             gamedata.game.game.currentRound = i;
             await nightTime(i);
-            let gameOver;
             await dayTime(i).then((gameStatus) => {
                 gameOver = gameStatus;
             });
-            if (gameOver) {
+            if (gameOver[1]) {
                 break;
             }
             console.log(`Round ${i} completed.`);
@@ -758,12 +817,15 @@ module.exports = {
         channel.send("Game Over!");
         gamedata.gameActive = false;
         gamedata.gameReady = false;
-        if (mafia === 0) {
-            channel.send("Village Wins!!!");
-            return;
-        } else if (mafia >= nonmafia) {
-            channel.send("Mafia Wins!!!");
-            return;
+        if (gameOver[0] === "neutral") {
+
         }
+        // if (mafia === 0) {
+        //     channel.send("Village Wins!!!");
+        //     return;
+        // } else if (mafia >= nonmafia) {
+        //     channel.send("Mafia Wins!!!");
+        //     return;
+        // }
     },
 };
