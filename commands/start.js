@@ -154,15 +154,13 @@ module.exports = {
                                         .filter(t => t.id !== "827754470825787413" &&
                                             t.id !== user.id &&
                                             gamedata.players.get(gamedata.userids.get(t.id)).isAlive)
-                                        .map(t => t.id) :
-                                        [];
+                                        .map(t => t.id) : [];
                                     let nays = votingEmojis.get("❌") ?
                                         Array.from(votingEmojis.get("❌").users.cache.values())
                                         .filter(t => t.id !== "827754470825787413" &&
                                             t.id !== user.id &&
                                             gamedata.players.get(gamedata.userids.get(t.id)).isAlive
-                                        ).map(t => t.id) :
-                                        [];
+                                        ).map(t => t.id) : [];
                                     let yayCount = yays.length;
                                     let nayCount = nays.length;
                                     if (gamedata.villageRoles["Mayor"].revealed && gamedata.players.get(gamedata.userids.get(gamedata.game.game.mayor)).isAlive) {
@@ -297,6 +295,25 @@ module.exports = {
                     }
                 }
 
+                message.guild.channels.resolve(gamedata.settings.get("townHall")).then((channel) => {
+                    gamedata.voiceConnection = channel.join();
+                    for (let member of Array.from(con.channel.members.values())) {
+                        let temp = gamedata.players.get(member.user.tag);
+                        if (temp && temp.isAlive) {
+                            temp.mixerInput = gamedata.mixer.input({
+                                channels: 2,
+                                sampleRate: 48000,
+                                bitDepth: 16
+                            });
+                            gamedata.players.set(member.user.tag, temp);
+                            voiceConnection.receiver.createStream(member.id, {
+                                end: "manual",
+                                mode: "pcm"
+                            }).pipe(gamedata.players.get(member.user.tag).mixerInput)
+                        }
+                    }
+                })
+
                 for (let member of users) {
                     let player = gamedata.players.get(gamedata.userids.get(member.id));
                     if (player.silencedLastRound) {
@@ -309,6 +326,9 @@ module.exports = {
                         });
                     }
                 }
+
+                gamedata.settings.get("emit").emit("stream", gamedata.mixer);
+
                 let roundOverTitle = `Night ${round} is over!`;
                 if (gamedata.game.game.deadThisRound.length === 0) {
                     roundOverTitle += " Nothing eventful happened.";
@@ -790,11 +810,31 @@ module.exports = {
         function nightTime(round) {
             return new Promise((resolve) => {
                 console.log("night time");
+                message.guild.channels.resolve(gamedata.settings.get("mafiaHouse")).then((channel) => {
+                    gamedata.voiceConnection = channel.join();
+                    for (let member of Array.from(con.channel.members.values())) {
+                        let temp = gamedata.players.get(member.user.tag);
+                        if (temp && temp.isAlive) {
+                            temp.mixerInput = gamedata.mixer.input({
+                                channels: 2,
+                                sampleRate: 48000,
+                                bitDepth: 16
+                            });
+                            gamedata.players.set(member.user.tag, temp);
+                            voiceConnection.receiver.createStream(member.id, {
+                                end: "manual",
+                                mode: "pcm"
+                            }).pipe(gamedata.players.get(member.user.tag).mixerInput)
+                        }
+                    }
+                })
                 for (let member of users) {
                     member.voice.setChannel(gamedata.players.get(gamedata.userids.get(member.id)).vc).catch(() => {
                         channel.send(`**${gamedata.players.get(gamedata.userids.get(member.id)).username}** could not be moved to **their home**, please join manually.`);
                     });
                 }
+
+                gamedata.settings.get("emit").emit("stream", gamedata.mixer);
 
                 nightActions(round).then(() => {
                     resolve();

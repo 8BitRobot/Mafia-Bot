@@ -20,6 +20,8 @@ module.exports = {
                 isAlive: true,
                 isHost: gamedata.players.size === 0,
                 vc: -1,
+                currentChannel: -1,
+                mixerInput: undefined,
                 will: [],
             });
             gamedata.userids.set(message.author.id, message.author.tag);

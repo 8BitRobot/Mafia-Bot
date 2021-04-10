@@ -1,13 +1,10 @@
 const Discord = require("discord.js");
-const client = new Discord.Client();
-const spectatorClient = new Discord.Client();
+const client = new Discord.Client({intents: new Discord.Intents(Discord.Intents.NON_PRIVILEGED)});
+const spectatorClient = new Discord.Client({intents: new Discord.Intents(Discord.Intents.NON_PRIVILEGED)});
 const config = require("./config.json");
 const spectatorConfig = require("./spectatorConfig.json");
 const fs = require("fs");
-const {
-    StreamInput,
-    StreamOutput
-} = require('fluent-ffmpeg-multistream')
+const AudioMixer = require('audio-mixer')
 
 const prefix = "m.";
 
@@ -18,6 +15,13 @@ class GameData {
         this.settings = new Map();
         this.gameActive = false;
         this.gameReady = false;
+        this.voiceConnection = undefined;
+        this.mixer = new AudioMixer.Mixer({
+            channels: 2,
+            bitDepth: 16,
+            sampleRate: 48000,
+            clearInterval: 1000
+        });
         this.game = {
             game: {
                 mayor: "",
@@ -31,25 +35,6 @@ class GameData {
             "🇦", "🇧", "🇨", "🇩", "🇪", "🇫", "🇬", "🇭", "🇮", "🇯", "🇰", "🇱", "🇲",
             "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹", "🇺", "🇻", "🇼", "🇽", "🇾", "🇿",
         ];
-        /*
-
-            {
-                game: {
-                    playersAlive: [],
-                    currentRound: 1
-                },
-                rounds: [
-                    Map() {
-                        framer: {
-                            action: "frame",
-                            choices: [tag]
-                        }
-                    }
-                ]
-
-            }
-
-        */
 
         this.settings.set("nightTime", 20);
         this.settings.set("dayTime", 20);
@@ -1185,27 +1170,9 @@ spectatorClient.once("ready", () => {
         }
     });
     emit.on("stream", (stream) => {
-        // let streams = {
-        //     opus: stream,
-        //     input: stream,
-        //     volume: new prism.VolumeTransformer({
-        //         type: 's16le',
-        //         volume: 1
-        //     })
-        // }
-        // streams.opus = stream
-        //     .pipe(streams.volume)
-        //     .pipe(new prism.opus.Encoder({
-        //         channels: 2,
-        //         rate: 48000,
-        //         frameSize: 480
-        //     }));
-        // let dispatcher = connection.player.createDispatcher({}, {});
-        // streams.opus.pipe(dispatcher);
-        // stream.on("data", (data) => {
-        //     console.log(data);
-        // })
-        connection.play(stream, {
+        var pass = stream.PassThrough()
+        stream.pipe(pass);
+        connection.play(pass, {
             type: "converted"
         });
     });
@@ -1220,6 +1187,31 @@ for (const file of commandFiles) {
     client.commands.set(command.name, command);
 }
 
+client.on("voiceStateUpdate", (oldState, newState) => {
+    if (!newState.member.user.bot && oldState.channelID !== newState.channelID) {
+        let temp = gamedata.players.get(newState.member.user.tag);
+        temp.currentChannel = newState.channelID;
+        gamedata.players.set(newState.member.user.tag, temp);
+    }
+    if (gamedata.voiceConnection.channel.id === newState.channelID && gamedata.voiceConnection.channel.id !== oldState.channelID && gamedata.playersAlive.includes(newState.member.user.tag)) {
+        let temp = gamedata.players.get(newState.member.user.tag);
+        temp.mixerInput = gamedata.mixer.input({
+            channels: 2,
+            sampleRate: 48000,
+            bitDepth: 16
+        });
+        gamedata.players.set(newState.member.user.tag, temp);
+        voiceConnection.receiver.createStream(newState.member.user.id, {end: "manual", mode: "pcm"}).pipe(gamedata.players.get(newState.member.user.tag).mixerInput)
+    }
+    if (gamedata.voiceConnection.channel.id === oldState.channelID && gamedata.voiceConnection.channel.id !== newState.channelID && gamedata.players.get(newState.member.user.tag)) {
+        let temp = gamedata.players.get(newState.member.user.tag);
+        if (temp.mixerInput) {
+            temp.mixerInput = undefined;
+            gamedata.mixer.removeInput(gamedata.players.get(newState.member.user.tag).mixerInput)
+            gamedata.players.set(newState.member.user.tag, temp);
+        }
+    }
+})
 
 client.on("message", (message) => {
     if (!message.content.startsWith(prefix) || message.author.bot) {
