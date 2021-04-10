@@ -7,6 +7,8 @@ module.exports = {
             message.channel.send(`**${message.author.username}** is already in the party.`);
         } else if (gamedata.gameActive) {
             message.channel.send("Game is in progress, please join after the current game as ended.");
+        } else if (!message.guild) {
+            message.channel.send("You need to be in a **guild** to join a game.");
         } else {
             gamedata.players.set(message.author.tag, {
                 id: message.author.id,
@@ -19,8 +21,8 @@ module.exports = {
                 align: undefined,
                 isAlive: true,
                 isHost: gamedata.players.size === 0,
-                vc: -1,
-                currentChannel: -1,
+                vc: undefined,
+                currentChannel: undefined,
                 mixerInput: undefined,
                 will: [],
             });

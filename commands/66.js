@@ -2,6 +2,10 @@ module.exports = {
     name: "66",
     description: "",
     async execute(message, args, gamedata, spectatorClient) {
+        if (message.channel.type === "dm") {
+            message.channel.send("This command is not allowed to be used here!")
+            return;
+        }
         let category;
         let arrayOfCategories = [];
         let categories = message.guild.channels.cache.filter(channel => channel.name === "Town of Larkinville");

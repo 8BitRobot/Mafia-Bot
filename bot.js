@@ -1,9 +1,27 @@
 const Discord = require("discord.js");
-const client = new Discord.Client({intents: new Discord.Intents(Discord.Intents.NON_PRIVILEGED)});
-const spectatorClient = new Discord.Client({intents: new Discord.Intents(Discord.Intents.NON_PRIVILEGED)});
+let intents = new Discord.Intents();
+intents.add(
+    "GUILDS",
+    "GUILD_EMOJIS",
+    "GUILD_VOICE_STATES",
+    "GUILD_MESSAGES",
+    "GUILD_MESSAGE_REACTIONS",
+    "GUILD_MESSAGE_TYPING",
+    "DIRECT_MESSAGES",
+    "DIRECT_MESSAGE_REACTIONS",
+    "DIRECT_MESSAGE_TYPING"
+);
+const client = new Discord.Client({
+    intents: intents,
+    partials: ['CHANNEL', 'GUILD_MEMBER', 'MESSAGE', 'REACTION', 'USER']
+});
+const spectatorClient = new Discord.Client({
+    intents: intents
+});
 const config = require("./config.json");
 const spectatorConfig = require("./spectatorConfig.json");
 const fs = require("fs");
+const stream = require("stream");
 const AudioMixer = require('audio-mixer')
 
 const prefix = "m.";
@@ -36,7 +54,7 @@ class GameData {
             "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹", "🇺", "🇻", "🇼", "🇽", "🇾", "🇿",
         ];
 
-        this.settings.set("nightTime", 5); // TODO increase these times
+        this.settings.set("nightTime", 20); // TODO increase these times
         this.settings.set("dayTime", 20);
         this.settings.set("votingTime", 10);
 
@@ -953,12 +971,12 @@ class GameData {
         this.neutralRoles = {
             players: [],
             tiers: {
-                1: {
-                    roles: ["Executioner"], // TODO: add Executioner
+                2: {
+                    roles: ["Jester", "Executioner"], // TODO: switch tier 1 and 2
                     pick: 1,
                 },
-                2: {
-                    roles: ["Baiter", "Arsonist"],
+                1: {
+                    roles: ["Arsonist"], // TODO: add baiter and switch 1 & 2
                     pick: 1,
                 },
                 3: {
@@ -974,12 +992,14 @@ class GameData {
                 id: "",
                 wasLynched: false,
                 isJester: false,
-                winMessage: new Discord.MessageEmbed()
-                    .setColor("#1984ff")
-                    .setTitle("You fools! You've played right into the Executioner's hands!")
-                    .setDescription(`<@${this.id}> tricked you into lynching his target. You thought the target was a Mafia, but they were only an innocent villager that the Executioner deeply hated.`)
-                    .attachFiles(["images/executioner.png"])
-                    .setThumbnail("attachment://executioner.png"),
+                winMessage: () => {
+                    return new Discord.MessageEmbed()
+                        .setColor("#1984ff")
+                        .setTitle("You fools! You've played right into the Executioner's hands!")
+                        .setDescription(`<@${this.neutralRoles["Executioner"].id}> tricked you into lynching his target. You thought the target was a Mafia, but they were only an innocent villager that the Executioner deeply hated.`)
+                        .attachFiles(["images/executioner.png"])
+                        .setThumbnail("attachment://executioner.png");
+                },
                 prompt: (user) => {},
                 night: (user) => {
                     return new Promise((resolve) => {
@@ -1032,12 +1052,14 @@ class GameData {
                 description: "",
                 wasLynched: false,
                 id: "",
-                winMessage: new Discord.MessageEmbed()
-                    .setColor("#1984ff")
-                    .setTitle("You fools! You've played right into the Jester's hands!")
-                    .setDescription(`<@${this.id}> tricked you into lynching him. You thought the Jester was a clown, but the rest of you were the clowns all along!`)
-                    .attachFiles(["images/jester.png"])
-                    .setThumbnail("attachment://jester.png"),
+                winMessage: () => {
+                    return new Discord.MessageEmbed()
+                        .setColor("#1984ff")
+                        .setTitle("You fools! You've played right into the Jester's hands!")
+                        .setDescription(`<@${this.neutralRoles["Jester"].id}> tricked you into lynching him. You thought the Jester was a clown, but the rest of you were the clowns all along!`)
+                        .attachFiles(["images/jester.png"])
+                        .setThumbnail("attachment://jester.png");
+                },
                 prompt: (user) => {},
                 night: (user) => {
                     return new Promise((resolve) => {
@@ -1046,8 +1068,7 @@ class GameData {
                 },
                 win: (guild, user, dead, byLynch) => {
                     return new Promise((resolve) => {
-                        let jester = user;
-                        if (jester === dead && byLynch) {
+                        if (user === dead && byLynch) {
                             this.neutralRoles["Jester"].id = this.players.get(dead).id;
                             resolve({
                                 role: "Jester",
@@ -1078,20 +1099,52 @@ class GameData {
             "Baiter": {
                 align: "Neutral",
                 description: "",
-                prompt: (user) => {
-                    user.send("bruh");
+                baitedCount: 0,
+                id: "",
+                winMessage: () => {
+                    return new Discord.MessageEmbed()
+                        .setColor("#1984ff")
+                        .setTitle("All the Baiter had to do was wait; suspecting nothing, others took the bait.")
+                        .setDescription(`<@${this.neutralRoles["Baiter"].id}> also wins! Try to be more careful with whom you visit at night.`)
+                        .attachFiles(["images/baiter.png"])
+                        .setThumbnail("attachment://baiter.png");
                 },
+                prompt: (user) => {},
                 night: (user) => {
                     return new Promise((resolve) => {
                         resolve({});
                     });
                 },
+                win: (_, user, __, ___) => {
+                    return new Promise((resolve) => { // don't step yet, let's check this manually
+                        if (this.neutralRoles["Baiter"].baitedCount >= 3 && this.players.get(user).isAlive) {
+                            this.neutralRoles["Baiter"].id = this.players.get(user).id;
+                            resolve({
+                                role: "Baiter",
+                                win: [true, false]
+                            });
+                        } else {
+                            resolve({
+                                role: "Baiter",
+                                win: [false, false]
+                            });
+                        }
+                    });
+                }
             },
             "Arsonist": {
                 align: "Neutral",
                 description: "",
                 emojiMap: new Map(),
                 doused: [],
+                winMessage: () => {
+                    return new Discord.MessageEmbed()
+                        .setColor("#1984ff")
+                        .setTitle("The Arsonist grins as Larkinville burns to the ground.")
+                        .setDescription(`<@${this.neutralRoles["Arsonist"].id}> wins! Maybe establish a fire department next time?`)
+                        .attachFiles(["images/arsonist.png"])
+                        .setThumbnail("attachment://arsonist.png");
+                },
                 prompt: (user) => {
                     return new Promise((resolve) => {
                         let that = this.neutralRoles["Arsonist"];
@@ -1101,9 +1154,11 @@ class GameData {
                             .setColor("#d50000")
                             .setTitle(`Night ${this.game.game.currentRound}: Who do you want to douse?`)
                             .setDescription("Select a player to douse or ignite all previously doused players using the reactions below:");
-                        for (let player of this.game.game.playersAlive.filter(t => !that.doused.includes(t) && this.players.get(t).isAlive)) {
-                            that.emojiMap.set(this.emojiArray[i], player);
-                            message.addField(`${this.emojiArray[i]} ${this.players.get(player).id === user.id ? " (Ignite)" : player}`, "\u200B", false);
+                        that.emojiMap.set(this.emojiArray[0], user.user.tag);
+                        message.addField(`${this.emojiArray[0]} Ignite`, "\u200B", false);
+                        for (let player of this.game.game.playersAlive.filter(t => !that.doused.includes(t) && this.players.get(t).isAlive && t !== this.userids.get(user.id))) {
+                            that.emojiMap.set(this.emojiArray[i + 1], player);
+                            message.addField(`${this.emojiArray[i + 1]} ${player}`, "\u200B", false);
                             i++;
                         }
                         let selection;
@@ -1126,9 +1181,11 @@ class GameData {
                                     user.send(noActionMessage);
                                     resolve("");
                                 } else {
-                                    if (this.players.get(selection).id !== user.id) that.doused.push(selection);
                                     reaction = emoji.first().emoji.name;
                                     selection = that.emojiMap.get(reaction);
+                                    if (this.players.get(selection).id !== user.id) {
+                                        that.doused.push(selection);
+                                    }
                                     let selectionMessage = new Discord.MessageEmbed()
                                         .setTitle(this.players.get(selection).id === user.id ? "You chose to ignite all previously doused players tonight" : `You chose to douse ${selection} tonight.`)
                                         .setColor("#d50000");
@@ -1162,7 +1219,7 @@ class GameData {
                 },
                 win: (guild, user, _, byLynch) => {
                     return new Promise((resolve) => {
-                        if (this.playersAlive.length === 1 && this.players.get(user).isAlive)  {
+                        if (this.game.game.playersAlive.length === 1 && this.players.get(user).isAlive) {
                             resolve({
                                 role: "Arsonist",
                                 win: [true, true]
@@ -1194,7 +1251,9 @@ client.once("ready", () => {
 });
 
 const EventEmitter = require("events");
-const { resolve } = require("path");
+const {
+    resolve
+} = require("path");
 class MyEmitter extends EventEmitter {}
 const emit = new MyEmitter();
 gamedata.settings.set("emit", emit);
@@ -1222,9 +1281,9 @@ spectatorClient.once("ready", () => {
             }, 2000);
         }
     });
-    emit.on("stream", (stream) => {
+    emit.on("stream", (mixedStream) => {
         var pass = stream.PassThrough()
-        stream.pipe(pass);
+        mixedStream.pipe(pass);
         connection.play(pass, {
             type: "converted"
         });
@@ -1241,12 +1300,20 @@ for (const file of commandFiles) {
 }
 
 client.on("voiceStateUpdate", (oldState, newState) => {
-    if (!newState.member.user.bot && oldState.channelID !== newState.channelID) {
+    if (gamedata.players.get(newState.member.user.tag) && !newState.member.user.bot && oldState.channelID !== newState.channelID) {
         let temp = gamedata.players.get(newState.member.user.tag);
         temp.currentChannel = newState.channelID;
         gamedata.players.set(newState.member.user.tag, temp);
     }
-    if (gamedata.voiceConnection.channel.id === newState.channelID && gamedata.voiceConnection.channel.id !== oldState.channelID && gamedata.playersAlive.includes(newState.member.user.tag)) {
+    if (newState.member.user.bot && oldState.channelID !== newState.channelID) {
+        gamedata.mixer = new AudioMixer.Mixer({
+            channels: 2,
+            bitDepth: 16,
+            sampleRate: 48000,
+            clearInterval: 1000
+        });
+    }
+    if (!newState.member.user.bot && gamedata.voiceConnection && gamedata.voiceConnection.channel.id === newState.channelID && gamedata.voiceConnection.channel.id !== oldState.channelID && gamedata.game.game.playersAlive.includes(newState.member.user.tag)) {
         let temp = gamedata.players.get(newState.member.user.tag);
         temp.mixerInput = gamedata.mixer.input({
             channels: 2,
@@ -1254,9 +1321,12 @@ client.on("voiceStateUpdate", (oldState, newState) => {
             bitDepth: 16
         });
         gamedata.players.set(newState.member.user.tag, temp);
-        voiceConnection.receiver.createStream(newState.member.user.id, {end: "manual", mode: "pcm"}).pipe(gamedata.players.get(newState.member.user.tag).mixerInput)
+        gamedata.voiceConnection.receiver.createStream(newState.member.user.id, {
+            end: "manual",
+            mode: "pcm"
+        }).pipe(gamedata.players.get(newState.member.user.tag).mixerInput)
     }
-    if (gamedata.voiceConnection.channel.id === oldState.channelID && gamedata.voiceConnection.channel.id !== newState.channelID && gamedata.players.get(newState.member.user.tag)) {
+    if (!newState.member.user.bot && gamedata.voiceConnection && gamedata.voiceConnection.channel.id === oldState.channelID && gamedata.voiceConnection.channel.id !== newState.channelID && gamedata.players.get(newState.member.user.tag)) {
         let temp = gamedata.players.get(newState.member.user.tag);
         if (temp.mixerInput) {
             temp.mixerInput = undefined;

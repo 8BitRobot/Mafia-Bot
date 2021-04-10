@@ -2,6 +2,10 @@ module.exports = {
     name: "leave",
     description: "",
     execute(message, args, gamedata, spectatorClient) {
+        if (message.channel.type === "dm") {
+            message.channel.send("This command is not allowed to be used here!")
+            return;
+        }
         let dev = ["PiAreSquared#6784", "8BitRobot#3625"]
         let isHost = gamedata.players.get(message.author.tag).isHost;
         if (gamedata.gameActive) {
