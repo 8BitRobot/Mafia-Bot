@@ -139,7 +139,7 @@ module.exports = {
                                 };
                                 votingPrompt.awaitReactions(promptFilter, {
                                     time: gamedata.settings.get("dayTime") * 1000,
-                                }).then((votingEmojis) => {
+                                }).then(async (votingEmojis) => {
                                     // let votingResult = (votingEmojis.get("✅") ?? {
                                     //     count: 0,
                                     // }).count > (votingEmojis.get("❌") ?? {
@@ -197,6 +197,27 @@ module.exports = {
                                             .setDescription("Here were the votes:")
                                             .addField("Guilty", yays, true)
                                             .addField("Innocent", nays, true);
+                                        await message.guild.channels.resolve(gamedata.settings.get("textChannel")).updateOverwrite(member, {
+                                            SEND_MESSAGES: false,
+                                            SEND_TTS_MESSAGES: false,
+                                            ADD_REACTIONS: false,
+                                        });
+                                        await message.guild.channels.resolve(gamedata.settings.get("townHall")).updateOverwrite(member, {
+                                            SPEAK: false,
+                                        });
+                                        await message.guild.channels.resolve(gamedata.settings.get("ghostTown")).updateOverwrite(member, {
+                                            VIEW_CHANNEL: true,
+                                            SPEAK: true
+                                        });
+                                        await message.guild.channels.resolve(gamedata.settings.get("ghostChat")).updateOverwrite(member, {
+                                            VIEW_CHANNEL: true,
+                                            SPEAK: true
+                                        });
+                                        if (gamedata.players.get(user).align === "Mafia") {
+                                            await message.guild.channels.resolve(gamedata.settings.get("mafiaHouse")).updateOverwrite(member, {
+                                                VIEW_CHANNEL: false,
+                                            });
+                                        }
                                     }
                                     channel.send(votingResultMsg).then(() => {
                                         if (votingResult && gamedata.players.get(nominee).will.length !== 0) {
@@ -373,15 +394,13 @@ module.exports = {
                             await sleepAsync(2000)
                             break;
                         case "Silencer":
-                            mafiaAttackMsg = new Discord.MessageEmbed()
+                            let silencerAttackMsg = new Discord.MessageEmbed()
                                 .setColor("#d50000")
                                 .attachFiles(["images/death.png"])
                                 .setThumbnail("attachment://death.png")
-                                .setTitle(`The Mafia attacked ${player.username} last night!`);
-                            if (gamedata.game.game.deadThisRound.filter(death => death.by === "Doctor").length === 0) {
-                                mafiaAttackMsg.setDescription("Unfortunately, the doctor was nowhere to be found.");
-                            }
-                            await channel.send(mafiaAttackMsg);
+                                .setTitle(`The Mafia attacked ${player.username} last night!`)
+                                .setDescription("Unfortunately, the doctor was nowhere to be found.");
+                            await channel.send(silencerAttackMsg);
                             await sleepAsync(2000)
                             break;
                         case "Doctor":
@@ -401,8 +420,8 @@ module.exports = {
                                 .setThumbnail("attachment://death.png")
                                 .setTitle(`The vigilante shot ${player.username}!`)
                                 .setDescription(align === "Village" ?
-                                    `Unfortunately, ${gamedata.players.get(death.name).username} was a **villager**. The vigilante, ${death.vigil}, committed suicide out of guilt.` :
-                                    `${gamedata.players.get(death.name).username} was a **${align}**! The vigilante lives to shoot another day.`
+                                    `Unfortunately, <@${gamedata.players.get(death.name).id}> was a **villager**. The vigilante, ${death.vigil}, committed suicide out of guilt.` :
+                                    `<@${gamedata.players.get(death.name).id}> was a **${align}**! The vigilante lives to shoot another day.`
                                 );
                             await channel.send(vigilanteKillMsg);
                             await sleepAsync(2000)
@@ -444,13 +463,22 @@ module.exports = {
                             for (let deadPlayer of death.killed) {
                                 await sleepAsync(2000);
                                 deadPlayer = gamedata.players.get(deadPlayer)
-                                if (deadPlayer.will.length !== 0) {
+                                if (!deadPlayer.silencedLastRound && deadPlayer.will.length !== 0) {
                                     will = new Discord.MessageEmbed()
                                         .setColor("#cccccc")
                                         .setTitle(`${deadPlayer.username}'s last will.`)
                                         .setDescription(deadPlayer.will.map(i => `\t${i[0]}.\t${i[1]}`).join("\n"));
                                     await channel.send(will);
                                     await sleepAsync(2000);
+                                } else if (deadPlayer.will.length !== 0) {
+                                    let suppressedWill = new Discord.MessageEmbed()
+                                        .setColor("#d50000")
+                                        .setTitle("Unfortunately, you were killed while being silenced. Your will was suppressed, and it won't be revealed for this entire game.")
+                                        .attachFiles(["images/death.png"])
+                                        .setThumbnail("attachment://death.png");
+                                    message.guild.members.fetch(player.id).then((user) => {
+                                        user.send(suppressedWill);
+                                    });
                                 }
                             }
                             gamedata.neutralRoles["Arsonist"].doused = []
@@ -464,13 +492,22 @@ module.exports = {
                                 .setThumbnail("attachment://death.png");
                             await channel.send(getBaitedMsg);
                             await sleepAsync(2000);
-                            if (player.will.length !== 0) {
+                            if (!player.silencedLastRound && player.will.length !== 0) {
                                 will = new Discord.MessageEmbed()
                                     .setColor("#cccccc")
                                     .setTitle(`${player.username}'s last will.`)
                                     .setDescription(player.will.map(i => `\t${i[0]}.\t${i[1]}`).join("\n"));
                                 await channel.send(will);
                                 await sleepAsync(2000);
+                            } else if (player.will.length !== 0) {
+                                let suppressedWill = new Discord.MessageEmbed()
+                                    .setColor("#d50000")
+                                    .setTitle("Unfortunately, you were killed while being silenced. Your will was suppressed, and it won't be revealed for this entire game.")
+                                    .attachFiles(["images/death.png"])
+                                    .setThumbnail("attachment://death.png");
+                                message.guild.members.fetch(player.id).then((user) => {
+                                    user.send(suppressedWill);
+                                });
                             }
                             break;
                     }
@@ -582,9 +619,11 @@ module.exports = {
                         let actor = gamedata.players.get(tag);
                         if (actor.distracted) {
                             let distractedMessage = new Discord.MessageEmbed()
-                                .setColor("#1e8c00")
+                                .setColor("#d50000")
                                 .setTitle("Unfortunately, while wandering the streets of Larkinville, you came across a strange-looking figure who offered you some colorful pills and brought you back to bed.")
-                                .setDescription("As a result, you were unable to do anything but sleep last night. Try again tomorrow!");
+                                .setDescription("As a result, you were unable to do anything but sleep last night. Try again tomorrow!")
+                                .attachFiles(["images/distractor.png"])
+                                .setThumbnail("attachment://distractor.png");
                             message.guild.members.resolve(actor.id).send(distractedMessage);
                             actor.distracted = false;
                             continue;
@@ -752,7 +791,9 @@ module.exports = {
                                         selectionRole !== "Mafioso" ||
                                         gamedata.mafiaRoles["Mafioso"].isGodfather) // if the selection isn't mafioso OR the mafioso is the godfather, in which case it's okay if they're mafioso
                                 ) {
-                                    selectionVisit = gamedata.players.get(roundByRole.get(selectionRole)[0].choice).username;
+                                    if (roundByRole.get(selectionRole)[0].choice) {
+                                        selectionVisit = gamedata.players.get(roundByRole.get(selectionRole)[0].choice).username;
+                                    }
                                 } else if (selectionRole === "Mafioso") {
                                     let godfatherChoice = roundByRole.get("Godfather")[0];
                                     if (Object.keys(godfatherChoice).length) {
@@ -848,7 +889,6 @@ module.exports = {
                                         by: "Mayor",
                                         name: tag
                                     })
-                                    gamedata.game.game.mayor = mayor.id;
                                 } else {
                                     let mayorSilencedMessage = new Discord.MessageEmbed()
                                         .setColor("#d50000")
@@ -955,6 +995,7 @@ module.exports = {
         for (let i = 1; nonmafia > mafia; i++) {
             gamedata.game.game.currentRound = i;
             await nightTime(i);
+            await sleepAsync(2000);
             await dayTime(i).then((gameStatus) => {
                 gameOver = gameStatus;
             });
@@ -962,9 +1003,9 @@ module.exports = {
                 break;
             }
             console.log(`Round ${i} completed.`);
+            await sleepAsync(2000);
         }
 
-        channel.send("Game Over!");
         gamedata.gameActive = false;
         gamedata.gameReady = false;
         if (gameOver[0] === "neutral") {
@@ -1002,5 +1043,31 @@ module.exports = {
             .setDescription(rolesList);
         await sleepAsync(2000);
         channel.send(finalSummary)
+        for (let [tag, player] of gamedata.players) {
+            message.guild.members.fetch(player.id).then(async (member) => {
+                member.voice.setChannel(gamedata.settings.get("townHall"));
+                await message.guild.channels.resolve(gamedata.settings.get("textChannel")).updateOverwrite(member, {
+                    SEND_MESSAGES: true,
+                    SEND_TTS_MESSAGES: true,
+                    ADD_REACTIONS: true,
+                });
+                await message.guild.channels.resolve(gamedata.settings.get("townHall")).updateOverwrite(member, {
+                    SPEAK: true,
+                });
+            })
+            player.role = undefined;
+            player.distracted = false;
+            player.wasFramed = false;
+            player.silencedThisRound = false;
+            player.silencedLastRound = false;
+            player.align = undefined;
+            player.isAlive = true;
+            player.vc = undefined;
+            player.currentChannel = undefined;
+            player.mixerInput = undefined;
+            player.will = [];
+            gamedata.players.set(tag, player);
+        }
+        return ["NEW GAME", gamedata.players];
     },
 };

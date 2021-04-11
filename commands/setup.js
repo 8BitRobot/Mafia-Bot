@@ -9,7 +9,7 @@ module.exports = {
             return;
         }
         function createVillage() {
-            if (gamedata.players.size < 1) { // TODO: increase to 5
+            if (gamedata.players.size < 5) {
                 message.channel.send("You don't have enough people!");
                 return false;
             }
@@ -43,7 +43,7 @@ module.exports = {
                 }
             } else {
                 mafiaCount = 1;
-                neutralCount = (gamedata.players.size < 5) ? 1 : 1; // TODO change it to 0 : 1
+                neutralCount = (gamedata.players.size < 5) ? 0 : 1;
             }
             let villagerCount = gamedata.players.size - mafiaCount - neutralCount;
 

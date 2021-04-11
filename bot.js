@@ -27,8 +27,8 @@ const AudioMixer = require('audio-mixer')
 const prefix = "m.";
 
 class GameData {
-    constructor() {
-        this.players = new Map();
+    constructor(playersFromLastRound) {
+        this.players = playersFromLastRound ?? new Map();
         this.userids = new Map();
         this.settings = new Map();
         this.gameActive = false;
@@ -54,9 +54,9 @@ class GameData {
             "🇳", "🇴", "🇵", "🇶", "🇷", "🇸", "🇹", "🇺", "🇻", "🇼", "🇽", "🇾", "🇿",
         ];
 
-        this.settings.set("nightTime", 20); // TODO increase these times
-        this.settings.set("dayTime", 20);
-        this.settings.set("votingTime", 10);
+        this.settings.set("nightTime", 30); // TODO increase these times
+        this.settings.set("dayTime", 40);
+        this.settings.set("votingTime", 20);
 
         this.mafiaRoles = {
             updateGodfather: (guild) => {
@@ -429,23 +429,23 @@ class GameData {
         this.villageRoles = {
             players: [],
             tiers: {
-                1: {
-                    roles: ["Doctor", "Detective"],
+                4: {
+                    roles: ["Doctor", "Detective"], // TODO fix the order
                     pick: false
                 },
-                2: {
+                3: {
                     roles: ["Vigilante", "Mayor"],
                     pick: false,
                 },
-                3: {
-                    roles: ["Jailer", "Distractor"],
+                1: {
+                    roles: ["Distractor"], // TODO add Jailer
                     pick: 1,
                 },
-                4: {
+                2: {
                     roles: ["PI", "Spy"],
                     pick: 1
                 },
-                pool: ["Jailer", "Distractor", "PI", "Spy"]
+                pool: ["Distractor", "PI", "Spy"] // TODO add Jailer
             },
             "Doctor": {
                 align: "Village",
@@ -696,9 +696,10 @@ class GameData {
                                                 .setTitle(`You have chosen to reveal yourself tomorrow.`)
                                                 .setColor("#1e8c00");
                                             that.revealed = true;
+                                            gamedata.game.game.mayor = user.id;
                                         } else {
                                             selectionMessage = new Discord.MessageEmbed()
-                                                .setTitle(`You have chose not to reveal yourself tomorrow.`)
+                                                .setTitle(`You have chosen not to reveal yourself tomorrow.`)
                                                 .setColor("#cccccc");
                                         }
                                         user.send(selectionMessage);
@@ -972,11 +973,11 @@ class GameData {
             players: [],
             tiers: {
                 2: {
-                    roles: ["Jester", "Executioner"], // TODO: switch tier 1 and 2
+                    roles: ["Jester", "Executioner", "Arsonist"], // TODO: switch tier 1 and 2, remove "Arsonist"
                     pick: 1,
                 },
                 1: {
-                    roles: ["Arsonist"], // TODO: add baiter and switch 1 & 2
+                    roles: ["Baiter"], // TODO: switch 1 & 2, add "Arsonist"
                     pick: 1,
                 },
                 3: {
@@ -1137,6 +1138,7 @@ class GameData {
                 description: "",
                 emojiMap: new Map(),
                 doused: [],
+                alreadyDead: false,
                 winMessage: () => {
                     return new Discord.MessageEmbed()
                         .setColor("#1984ff")
@@ -1224,6 +1226,45 @@ class GameData {
                                 role: "Arsonist",
                                 win: [true, true]
                             })
+                        } else if (!this.players.get(user).isAlive && !this.neutralRoles["Arsonist"].alreadyDead) {
+                            guild.channels.resolve(this.settings.get("textChannel")).then(async (channel) => {
+                                this.neutralRoles["Arsonist"].alreadyDead = true;
+                                let dousedList = this.neutralRoles["Arsonist"].doused;
+                                let arsonistMessage = new Discord.MessageEmbed()
+                                    .setColor("#1984ff")
+                                    .setTitle("Oh no! You've killed the Arsonist!");
+                                if (dousedList.length > 0) {
+                                    let finalVictim = dousedList[Math.floor(Math.random() * dousedList.length)];
+                                    finalVictim = this.players.get(finalVictim);
+                                    finalVictim.isAlive = false;
+                                    arsonistMessage.setDescription(`As a parting gift to a cruel world, <@${this.players.get(user).id}> lit one of his targets on fire. Larkinville intelligence reports identified the body as that of <@${this.players.get(finalVictim).id}>.`);
+                                    if (!finalVictim.silencedLastRound && finalVictim.will.length !== 0) {
+                                        will = new Discord.MessageEmbed()
+                                            .setColor("#cccccc")
+                                            .setTitle(`${finalVictim.username}'s last will.`)
+                                            .setDescription(finalVictim.will.map(i => `\t${i[0]}.\t${i[1]}`).join("\n"));
+                                        await channel.send(will);
+                                        await sleepAsync(2000);
+                                    } else if (finalVictim.will.length !== 0) {
+                                        let suppressedWill = new Discord.MessageEmbed()
+                                            .setColor("#d50000")
+                                            .setTitle("Unfortunately, you were killed while being silenced. Your will was suppressed, and it won't be revealed for this entire game.")
+                                            .attachFiles(["images/death.png"])
+                                            .setThumbnail("attachment://death.png");
+                                        message.guild.members.fetch(finalVictim.id).then((user) => {
+                                            user.send(suppressedWill);
+                                        });
+                                    }
+                                } else {
+                                    arsonistMessage.setDescription(`However, <@${this.players.get(user).id}> had no recent targets, and thus didn't kill anyone before dying.`);
+                                }
+                            
+                                channel.send(arsonistMessage);
+                                resolve({
+                                    role: "Arsonist",
+                                    win: [false, true]
+                                });
+                            });
                         } else {
                             resolve({
                                 role: "Arsonist",
@@ -1352,8 +1393,12 @@ client.on("message", (message) => {
     } else if (message.content.startsWith(prefix)) {
         let args = message.content.substring(prefix.length).trim().split(/ +/);
         let command = args.shift().toLowerCase();
+        let createNewGame;
         try {
-            client.commands.get(command).execute(message, args, gamedata, spectatorClient);
+            createNewGame = client.commands.get(command).execute(message, args, gamedata, spectatorClient);
+            if (createNewGame && createNewGame[0] === "NEW GAME") {
+                gamedata = new GameData(createNewGame[1]);
+            }
         } catch (error) {
             console.error(error);
             message.channel.send("There was an error. The command didn't work.");
