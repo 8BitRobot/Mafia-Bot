@@ -4,6 +4,10 @@ module.exports = {
     name: "setup",
     description: "",
     async execute(message, args, gamedata, spectatorClient) {
+        if (message.channel.type === "dm") {
+            message.channel.send("You need to be in a **guild** to set up a game.")
+            return;
+        }
         function createVillage() {
             if (gamedata.players.size < 1) { // TODO: increase to 5
                 message.channel.send("You don't have enough people!");
@@ -39,7 +43,7 @@ module.exports = {
                 }
             } else {
                 mafiaCount = 1;
-                neutralCount = (gamedata.players.size < 5) ? 0 : 1;
+                neutralCount = (gamedata.players.size < 5) ? 1 : 1; // TODO change it to 0 : 1
             }
             let villagerCount = gamedata.players.size - mafiaCount - neutralCount;
 
@@ -82,8 +86,7 @@ module.exports = {
                     .setTitle(`You are the **${player.role}**`)
                     .setDescription(gamedata[`${player.align.toLowerCase()}Roles`][player.role].description)
                     .attachFiles([`images/${player.role.toLowerCase()}.png`])
-                    .setImage(`attachment://${player.role.toLowerCase()}.png`);
-                // assignedMafiaRoles.push(player.role);
+                    .setImage(`attachment://${player.role.toLowerCase()}.png`);;
                 gamedata.players.set(randPlayer, player);
             }
 
@@ -124,7 +127,6 @@ module.exports = {
                     .setDescription(gamedata[`${player.align.toLowerCase()}Roles`][player.role].description)
                     .attachFiles([`images/${player.role.toLowerCase()}.png`])
                     .setImage(`attachment://${player.role.toLowerCase()}.png`);
-                // assignedVillageRoles.push(player.role);
                 gamedata.players.set(randPlayer, player);
             }
 
@@ -179,7 +181,6 @@ module.exports = {
                     .setDescription(gamedata[`${player.align.toLowerCase()}Roles`][player.role].description)
                     .attachFiles([`images/${player.role.toLowerCase()}.png`])
                     .setImage(`attachment://${player.role.toLowerCase()}.png`);
-                // assignedNeutralRoles.push(player.role);
                 gamedata.players.set(randPlayer, player);
             }
 
@@ -196,7 +197,6 @@ module.exports = {
                         deny: ["SPEAK"],
                     }],
                 }).then(async (id) => {
-                    // await message.guild.channels.resolve(id).setParent(category);
                     gamedata.settings.set("townHall", id.id);
                     for (const [_, player] of gamedata.players) {
                         let user = await message.guild.members.fetch(player.id);
@@ -211,12 +211,12 @@ module.exports = {
                     }).then((ghostChannel) => {
                         gamedata.settings.set("ghostTown", ghostChannel.id);
                         let permsForGhost = []
-                        // for (let [_, player] of gamedata.players) {
-                        //     permsForGhost.push({
-                        //         id: player.id,
-                        //         deny: ['VIEW_CHANNEL']
-                        //     })
-                        // }
+                        for (let [_, player] of gamedata.players) {
+                            permsForGhost.push({
+                                id: player.id,
+                                deny: ['VIEW_CHANNEL']
+                            })
+                        }
                         ghostChannel.overwritePermissions(permsForGhost);
                         gamedata.settings.get("emit").emit("ghost town", ghostChannel);
                     })
@@ -226,12 +226,12 @@ module.exports = {
                     }).then((ghostChat) => {
                         gamedata.settings.set("ghostChat", ghostChat.id);
                         let permsForGhost = []
-                        // for (let [_, player] of gamedata.players) {
-                        //     permsForGhost.push({
-                        //         id: player.id,
-                        //         deny: ['VIEW_CHANNEL']
-                        //     })
-                        // }
+                        for (let [_, player] of gamedata.players) {
+                            permsForGhost.push({
+                                id: player.id,
+                                deny: ['VIEW_CHANNEL']
+                            })
+                        }
                         ghostChat.overwritePermissions(permsForGhost);
                     })
                 }).then(() => {
@@ -243,7 +243,6 @@ module.exports = {
                             deny: ["VIEW_CHANNEL"],
                         }],
                     }).then(async (id) => {
-                        // await message.guild.channels.resolve(id).setParent(category);
                         gamedata.settings.set("mafiaHouse", id.id);
                     }).then(async () => {
                         for (const [tag, player] of gamedata.players) {
@@ -266,7 +265,6 @@ module.exports = {
                                         allow: ["VIEW_CHANNEL"],
                                     }],
                                 }).then(async (id) => {
-                                    // await message.guild.channels.resolve(id).setParent(category);
                                     let temp = gamedata.players.get(tag);
                                     temp.vc = id.id;
                                     gamedata.players.set(tag, temp);

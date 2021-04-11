@@ -2,6 +2,10 @@ module.exports = {
     name: "remove",
     description: "",
     execute(message, args, gamedata, spectatorClient) {
+        if (message.channel.type === "dm") {
+            message.channel.send("You need to be in a **guild** to manage a game.")
+            return;
+        }
         let userid = args[0].replace("<@!", "").replace(">", "");
         if (!gamedata.players.get(message.author.tag).isHost && message.author.tag !== "PiAreSquared#6784" && message.author.tag !== "8BitRobot#3625") {
             message.channel.send(`**${message.author.tag}** does not have the permissions to remove someone from the party.`)
