@@ -1,4 +1,4 @@
-// https://discord.com/api/oauth2/authorize?client_id=827754470825787413&permissions=8&scope=bot
+// https://discord.com/api/oauth2/authorize?client_id=827754470825787413&permissions=2278030656&scope=bot
 
 const Discord = require("discord.js");
 let intents = new Discord.Intents();
