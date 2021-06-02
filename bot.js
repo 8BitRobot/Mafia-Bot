@@ -78,8 +78,8 @@ class GameData {
                             this.mafiaRoles[i].isGodfather = true;
                             let newGodfather = new Discord.MessageEmbed()
                                 .setColor("#d50000")
-                                .setTitle("As the current Godfather has died, you have been chosen to lead the Larkinville Mafia.")
-                                .setDescription("You will hereafter be responsible for killing the villagers of Larkinville. Use your newfound power wisely, for with great power comes great responsibility.")
+                                .setTitle("As the current Godfather has died, you have been chosen to lead the Mafiaville Mafia.")
+                                .setDescription("You will hereafter be responsible for killing the villagers of Mafiaville. Use your newfound power wisely, for with great power comes great responsibility.")
                                 .attachFiles(["images/godfather.png"])
                                 .setImage("attachment://godfather.png")
                             guild.members.fetch(this.players.get(tag).id).then((user) => {
@@ -113,7 +113,7 @@ class GameData {
                 pool: [],
             },
             "Godfather": {
-                description: "You're the leader of the Larkinville Mafia and order a murder each night. Your goal is to have all the townspeople killed.",
+                description: "You're the leader of the Mafiaville Mafia and order a murder each night. Your goal is to have all the townspeople killed.",
                 align: "Mafia",
                 emojiMap: new Map(),
                 isGodfather: true,
@@ -185,7 +185,7 @@ class GameData {
             "Framer": {
                 align: "Mafia",
                 emojiMap: new Map(),
-                description: "You've moved up the ranks in the Larkinville Mafia due to your uncanny ability to alter the evidence. Your goal is to help the Mafia destroy the town by framing innocent villagers each night.",
+                description: "You've moved up the ranks in the Mafiaville Mafia due to your uncanny ability to alter the evidence. Your goal is to help the Mafia destroy the town by framing innocent villagers each night.",
                 isGodfather: false,
                 prompt: (user) => {
                     return new Promise((resolve) => {
@@ -456,7 +456,7 @@ class GameData {
             },
             "Doctor": {
                 align: "Village",
-                description: "You're the resident medical expert in Larkinville. Your job is to save those attacked by the Mafia.",
+                description: "You're the resident medical expert in Mafiaville. Your job is to save those attacked by the Mafia.",
                 emojiMap: new Map(),
                 lastChoice: "",
                 prompt: (user) => {
@@ -527,7 +527,7 @@ class GameData {
             },
             "Detective": {
                 align: "Village",
-                description: "As the criminology expert in the Larkinville Police Department, you've been hard at work investigating recent murders each night. Your goal is to deduce the identities of the Mafia.",
+                description: "As the criminology expert in the Mafiaville Police Department, you've been hard at work investigating recent murders each night. Your goal is to deduce the identities of the Mafia.",
                 emojiMap: new Map(),
                 prompt: (user) => {
                     return new Promise((resolve) => {
@@ -1149,7 +1149,7 @@ class GameData {
                 winMessage: () => {
                     return new Discord.MessageEmbed()
                         .setColor("#1984ff")
-                        .setTitle("The Arsonist grins as Larkinville burns to the ground.")
+                        .setTitle("The Arsonist grins as Mafiaville burns to the ground.")
                         .setDescription(`<@${this.neutralRoles["Arsonist"].id}> wins! Maybe establish a fire department next time?`)
                         .attachFiles(["images/arsonist.png"])
                         .setThumbnail("attachment://arsonist.png");
@@ -1244,7 +1244,7 @@ class GameData {
                                     let finalVictim = dousedList[Math.floor(Math.random() * dousedList.length)];
                                     finalVictim = this.players.get(finalVictim);
                                     finalVictim.isAlive = false;
-                                    arsonistMessage.setDescription(`As a parting gift to a cruel world, <@${this.players.get(user).id}> lit one of his targets on fire. Larkinville intelligence reports identified the body as that of <@${this.players.get(finalVictim).id}>.`);
+                                    arsonistMessage.setDescription(`As a parting gift to a cruel world, <@${this.players.get(user).id}> lit one of his targets on fire. Mafiaville intelligence reports identified the body as that of <@${this.players.get(finalVictim).id}>.`);
                                     if (!finalVictim.silencedLastRound && finalVictim.will.length !== 0) {
                                         will = new Discord.MessageEmbed()
                                             .setColor("#cccccc")
