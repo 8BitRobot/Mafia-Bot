@@ -7,6 +7,7 @@
     "discord.js": "github:discordjs/discord.js#63ff6a07ebcba7e9134e3902e338e8dc6564ee63",
     "fluent-ffmpeg": "^2.1.2",
     "fluent-ffmpeg-multistream": "^1.0.0",
+    "mongoclient": "^1.0.3",
     "node-opus": "^0.3.3",
     "prism-media": "^1.2.9"
   }

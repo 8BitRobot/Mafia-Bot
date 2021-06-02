@@ -58,6 +58,13 @@ class GameData {
         this.settings.set("dayTime", 40);
         this.settings.set("votingTime", 20);
 
+        this.allRoles = [
+            "Godfather", "Mafioso", "Framer", "Silencer",
+            "Detective", "Doctor", "Vigilante", "Mayor",
+            "Distractor", "PI", "Spy", "Jester",
+            "Executioner", "Baiter", "Arsonist",
+        ];
+
         this.mafiaRoles = {
             updateGodfather: (guild) => {
                 let hierarchy = ["Mafioso", "Framer", "Disguiser", "Silencer"];
@@ -261,7 +268,7 @@ class GameData {
             },
             "Silencer": {
                 align: "Mafia",
-                description: "",
+                description: "You, like the rest of the mafia, go after innocent villagers. But instead of killing them, you silence them, locking them into their homes for the night and day.",
                 emojiMap: new Map(),
                 isGodfather: false,
                 workedLastNight: false,
@@ -429,19 +436,19 @@ class GameData {
         this.villageRoles = {
             players: [],
             tiers: {
-                4: {
-                    roles: ["Doctor", "Detective"], // TODO fix the order
+                1: {
+                    roles: ["Doctor", "Detective"],
                     pick: false
                 },
-                3: {
+                2: {
                     roles: ["Vigilante", "Mayor"],
                     pick: false,
                 },
-                1: {
+                3: {
                     roles: ["Distractor"], // TODO add Jailer
                     pick: 1,
                 },
-                2: {
+                4: {
                     roles: ["PI", "Spy"],
                     pick: 1
                 },
