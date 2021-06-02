@@ -185,7 +185,7 @@ module.exports = {
             }
 
             // Create Town Hall, Godfather's Lair, and people's individual homes, and set proper permissions for each room
-            message.guild.channels.create("Town of Larkinville", {
+            message.guild.channels.create("Town of Mafiaville", {
                 type: "category",
             }).then((category) => {
                 gamedata.settings.set("category", category);
@@ -205,7 +205,7 @@ module.exports = {
                         });
                     }
                 }).then(() => {
-                    message.guild.channels.create("Ghosts of Larkinville", {
+                    message.guild.channels.create("Ghosts of Mafiaville", {
                         type: 'voice',
                         parent: category,
                     }).then((ghostChannel) => {
@@ -220,7 +220,7 @@ module.exports = {
                         ghostChannel.overwritePermissions(permsForGhost);
                         gamedata.settings.get("emit").emit("ghost town", ghostChannel);
                     })
-                    message.guild.channels.create("Larkinville Cemetery", {
+                    message.guild.channels.create("Mafiaville Cemetery", {
                         type: 'text',
                         parent: category,
                     }).then((ghostChat) => {
@@ -280,7 +280,7 @@ module.exports = {
                                 });
                             }
                         }
-                        message.guild.channels.create("The Larkinville Mafia", {
+                        message.guild.channels.create("The Mafiaville Mafia", {
                             type: "text",
                             parent: category,
                             permissionOverwrites: [{

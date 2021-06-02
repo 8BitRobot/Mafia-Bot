@@ -9,7 +9,7 @@ module.exports = {
             }
             let category;
             let arrayOfCategories = [];
-            let categories = message.guild.channels.cache.filter(channel => channel.name === "Town of Larkinville");
+            let categories = message.guild.channels.cache.filter(channel => channel.name === "Town of Mafiaville");
             for (category of categories) {
                 arrayOfCategories.push(category[0]);
             }

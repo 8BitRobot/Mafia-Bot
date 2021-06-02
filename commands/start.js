@@ -621,7 +621,7 @@ module.exports = {
                         if (actor.distracted) {
                             let distractedMessage = new Discord.MessageEmbed()
                                 .setColor("#d50000")
-                                .setTitle("Unfortunately, while wandering the streets of Larkinville, you came across a strange-looking figure who offered you some colorful pills and brought you back to bed.")
+                                .setTitle("Unfortunately, while wandering the streets of Mafiaville, you came across a strange-looking figure who offered you some colorful pills and brought you back to bed.")
                                 .setDescription("As a result, you were unable to do anything but sleep last night. Try again tomorrow!")
                                 .attachFiles(["images/distractor.png"])
                                 .setThumbnail("attachment://distractor.png");
@@ -663,7 +663,7 @@ module.exports = {
                                     let targetDeathMsg = new Discord.MessageEmbed()
                                         .setColor("#d50000")
                                         .setTitle("Unfortunately, you were attacked by the mafia.")
-                                        .setDescription(`You attempt to ${temp.role === "Doctor" ? "grab your first-aid kit!" : "summon the doctor using the Larkinville Emergency Line!"}`)
+                                        .setDescription(`You attempt to ${temp.role === "Doctor" ? "grab your first-aid kit!" : "summon the doctor using the Mafiaville Emergency Line!"}`)
                                         .attachFiles(["images/death.png"])
                                         .setThumbnail("attachment://death.png");
                                     user.send(targetDeathMsg);
@@ -732,12 +732,12 @@ module.exports = {
                                         vigilanteKillMsg = new Discord.MessageEmbed()
                                             .setColor("#1e8c00")
                                             .setTitle(`After killing ${temp.username}, you find a sheet of paper laid on the table.`)
-                                            .setDescription("The paper contains the Larkinville Mafia's plans to kill the rest of the village.");
+                                            .setDescription("The paper contains the Mafiaville Mafia's plans to kill the rest of the village.");
                                     } else {
                                         vigilanteKillMsg = new Discord.MessageEmbed()
                                             .setColor("#1984ff")
                                             .setTitle(`After killing ${temp.username}, you find a sheet of paper laid on the table.`)
-                                            .setDescription(`The paper reads that ${temp.username} did not align with the Village but did not agree with the Larkinville Mafia's methods.`);
+                                            .setDescription(`The paper reads that ${temp.username} did not align with the Village but did not agree with the Mafiaville Mafia's methods.`);
                                     }
                                     user.send(vigilanteKillMsg);
                                 });
@@ -992,7 +992,7 @@ module.exports = {
             });
         }
         let gameOver;
-        channel.send("By playing with the Town of Larkinville, you agree to allow the bot to record voice activity in select channels for the purpose of live playback during the game.")
+        channel.send("By playing with the Town of Mafiaville, you agree to allow the bot to record voice activity in select channels for the purpose of live playback during the game.")
         for (let i = 1; nonmafia > mafia; i++) {
             gamedata.game.game.currentRound = i;
             await nightTime(i);
@@ -1014,8 +1014,8 @@ module.exports = {
         } else if (gameOver[0] === "mafia") {
             let mafiaWins = new Discord.MessageEmbed()
                 .setColor("#d50000")
-                .setTitle("And with that, the Mafia has brought about the total destruction of Larkinville.")
-                .setDescription("The town of Larkinville will truly never be the same... until the next game.")
+                .setTitle("And with that, the Mafia has brought about the total destruction of Mafiaville.")
+                .setDescription("The town of Mafiaville will truly never be the same... until the next game.")
                 .attachFiles(["images/godfather.png"])
                 .setThumbnail("attachment://godfather.png");
             channel.send(mafiaWins);
@@ -1025,7 +1025,7 @@ module.exports = {
         } else if (gameOver[0] === "village") {
             let villageWins = new Discord.MessageEmbed()
                 .setColor("#1e8c00")
-                .setTitle("And with that, the townspeople have vanquished the Larkinville Mafia.")
+                .setTitle("And with that, the townspeople have vanquished the Mafiaville Mafia.")
                 .setDescription("The village can sleep peacefully, knowing that the days of unsolved murders are over... at least, until the next game.")
                 .attachFiles(["images/mayor.png"])
                 .setThumbnail("attachment://mayor.png");
