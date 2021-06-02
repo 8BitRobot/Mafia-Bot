@@ -400,7 +400,7 @@ class GameData {
             },
             "Mafioso": {
                 align: "Mafia",
-                description: "",
+                description: "You're the Godfather's right-hand man. As long as the Godfather is alive, you'll do exclusively his bidding, visiting villagers to kill them on his behalf. However, if he meets his demise, you'll replace him.",
                 isGodfather: false,
                 prompt: (user) => {},
                 night: (user) => {
@@ -598,7 +598,7 @@ class GameData {
             },
             "Vigilante": {
                 align: "Village",
-                description: "",
+                description: "Having little faith in the Mafiaville Police Department, you've chosen to take matters into your own hands. You can hunt for mafia and neutrals each night, and you can shoot on sight; but if you miss and murder an innocent villager, you'll take your own life out of guilt.",
                 emojiMap: new Map(),
                 prompt: (user) => {
                     return new Promise((resolve) => {
@@ -667,7 +667,7 @@ class GameData {
             },
             "Mayor": {
                 align: "Village",
-                description: "",
+                description: "The results are in, and you've been elected as the leader of the Mafiaville City Council! However, you can't say anything right away because the Mafia might hunt you down. Should you choose to reveal yourself, you'll be granted an extra vote in Town Hall meetings - but until then, you're invisible amongst the people.",
                 revealed: false,
                 prompt: (user) => {
                     return new Promise((resolve) => {
@@ -732,21 +732,21 @@ class GameData {
                     });
                 },
             },
-            "Jailer": {
-                align: "Village",
-                description: "",
-                prompt: (user) => {
-                    user.send("bruh");
-                },
-                night: (user) => {
-                    return new Promise((resolve) => {
-                        resolve({});
-                    });
-                },
-            },
+//             "Jailer": {
+//                 align: "Village",
+//                 description: "",
+//                 prompt: (user) => {
+//                     user.send("bruh");
+//                 },
+//                 night: (user) => {
+//                     return new Promise((resolve) => {
+//                         resolve({});
+//                     });
+//                 },
+//             },
             "Distractor": {
                 align: "Village",
-                description: "",
+                description: "As a former wrestler and one of the eldest members of the City Council, you're naturally very intimidating. When you visit a house, the resident will forget their plans for the night and instead hide in their bedroom, cowering in fear and quietly sobbing. Of course, that house visit is quite exhausting, so you can only distract every other night - so use this power wisely.",
                 workedLastNight: false,
                 emojiMap: new Map(),
                 prompt: (user) => {
@@ -826,7 +826,7 @@ class GameData {
             },
             "PI": {
                 align: "Village",
-                description: "",
+                description: "You and the Detective went to college together, but you chose a minor in psychology and focused on reading people. While the detective looks for evidence, you examine a subject's social interactions, determining if two members of the town are on the same side. However, you won't know which side they're on, so be careful when sharing this information.",
                 emojiMap: new Map(),
                 prompt: (user) => {
                     return new Promise((resolve) => {
@@ -910,7 +910,7 @@ class GameData {
             "Spy": {
                 align: "Village",
                 emojiMap: new Map(),
-                description: "",
+                description: "Unlike the other investigators, you're self-trained. You don't bother with evidence or social cues. Instead, you pick a villager and follow them all night. Maybe you'll find that they visited the Mafia's victim, in which case the implications are clear; or maybe they visited nobody, and you're still left guessing.",
                 prompt: (user) => {
                     return new Promise((resolve) => {
                         let that = this.villageRoles["Spy"];
@@ -989,15 +989,15 @@ class GameData {
                     roles: ["Baiter"], // TODO: switch 1 & 2, add "Arsonist"
                     pick: 1,
                 },
-                3: {
-                    roles: ["Eternal"],
-                    pick: false,
-                },
+//                 3: {
+//                     roles: ["Eternal"],
+//                     pick: false,
+//                 },
                 pool: ["Baiter", "Arsonist"]
             },
             "Executioner": {
                 align: "Neutral",
-                description: "",
+                description: "Unlike the Mafia, you don't want all the villagers dead; rather, you're focused on one specific villager, and your goal is to get them lynched at the hands of the town. If they die overnight (by Mafia or Vigilante), you'll become the Jester, and your goal will be to prank the town by getting **yourself** lynched.",
                 target: "",
                 id: "",
                 wasLynched: false,
@@ -1059,7 +1059,7 @@ class GameData {
             },
             "Jester": {
                 align: "Neutral",
-                description: "",
+                description: "All your life, people have laughed at you. It makes sense, after all, because you're a clown. Now, it's time to pull the ultimate prank: getting **YOURSELF** lynched by the town. If you die for any other reason, you'll have died a failure.",
                 wasLynched: false,
                 id: "",
                 winMessage: () => {
@@ -1108,7 +1108,7 @@ class GameData {
             },
             "Baiter": {
                 align: "Neutral",
-                description: "",
+                description: "Being an angry, wheelchair-bound army veteran, you can't go out much apart from Town Hall meetings. You also hate the world for sending you off to war. As a result, you became the Baiter, using your knowledge of bombs to blow up anyone who visits your house. If you blow up **THREE** people and survive to tell the tale, you'll consider your life a success.",
                 baitedCount: 0,
                 id: "",
                 winMessage: () => {
@@ -1144,7 +1144,7 @@ class GameData {
             },
             "Arsonist": {
                 align: "Neutral",
-                description: "",
+                description: "Like Nero fiddled over a burning Rome, you too play the flute over a city in flames. You have one goal in life, and it's to kill **EVERYONE**. Mafia, village, neutral - alignments aren't important to you, only the fall of Mafiaville.",
                 emojiMap: new Map(),
                 doused: [],
                 alreadyDead: false,
