@@ -1,5 +1,4 @@
 const Discord = require("discord.js");
-const MongoClient = require("mongoclient").MongoClient;
 
 module.exports = {
     name: "start",
@@ -1044,36 +1043,6 @@ module.exports = {
             .setDescription(rolesList);
         await sleepAsync(2000);
         channel.send(finalSummary);
-
-        MongoClient.connect("mongodb://localhost:27017", async (err, client) => {
-            if (err) {
-                console.error("Stats could not be updated.");
-                return;
-            }
-
-            let stats = client.db("Mafia Bot").collection("stats");
-            let emptyStats = {};
-            for (let i of gamedata.allRoles) {
-                emptyStats[i] = 0;
-            }
-            for (let [tag, player] of gamedata.players) {
-                let playerExists = await stats.findOne({ "name": tag });
-                if (!playerExists) {
-                    await stats.insertOne({ "name": tag, "stats": emptyStats });
-                }
-                let field = {"name": tag};
-                field[`stats.${player.role}`] = {"$exists": true};
-                let fieldExists = await stats.findOne(field);
-                if (!fieldExists) {
-                    field = {};
-                    field[`stats.${player.role}`] = 0;
-                    await stats.updateOne({"name": tag}, field);
-                }
-                let statsUpdate = {};
-                statsUpdate[`stats.${player.role}`] = 1;
-                await stats.updateOne({"name": tag}, { $inc: statsUpdate });
-            }
-        });
 
         for (let [tag, player] of gamedata.players) {
             message.guild.members.fetch(player.id).then(async (member) => {
