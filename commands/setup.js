@@ -31,9 +31,9 @@ module.exports = {
             let mafiaCount, neutralCount;
             if (gamedata.settings.get("mafiaHidden") && gamedata.players.size >= 10 || gamedata.players.size >= 13) {
                 mafiaCount = 3;
-                neutralCount = Math.round(Math.random()) + 3;
-                if (gamedata.players.size <= 11) {
-                    neutralCount--;
+                neutralCount = Math.round(Math.random()) + 2;
+                if (gamedata.players.size > 11) {
+                    neutralCount++;
                 }
             } else if (gamedata.settings.get("mafiaHidden") && gamedata.players.size >= 6 || gamedata.players.size >= 8) {
                 mafiaCount = 2;
@@ -43,7 +43,7 @@ module.exports = {
                 }
             } else {
                 mafiaCount = 1;
-                neutralCount = (gamedata.players.size < 5) ? 0 : 1;
+                neutralCount = 1;
             }
             let villagerCount = gamedata.players.size - mafiaCount - neutralCount;
 
@@ -85,6 +85,7 @@ module.exports = {
                     .setColor("#d50000")
                     .setTitle(`You are the **${player.role}**`)
                     .setDescription(gamedata[`${player.align.toLowerCase()}Roles`][player.role].description)
+                    .addField("Goal", gamedata[`${player.align.toLowerCase()}Roles`][player.role].goal)
                     .attachFiles([`images/${player.role.toLowerCase()}.png`])
                     .setImage(`attachment://${player.role.toLowerCase()}.png`);;
                 gamedata.players.set(randPlayer, player);
@@ -125,6 +126,7 @@ module.exports = {
                     .setColor("#1e8c00")
                     .setTitle(`You are the **${player.role}**`)
                     .setDescription(gamedata[`${player.align.toLowerCase()}Roles`][player.role].description)
+                    .addField("Goal", gamedata[`${player.align.toLowerCase()}Roles`][player.role].goal)
                     .attachFiles([`images/${player.role.toLowerCase()}.png`])
                     .setImage(`attachment://${player.role.toLowerCase()}.png`);
                 gamedata.players.set(randPlayer, player);
@@ -135,7 +137,6 @@ module.exports = {
             currentTierObject = JSON.parse(JSON.stringify(gamedata.neutralRoles.tiers));
             currentTier = 1;
             rolePool = [...currentTierObject.pool];
-
             for (i = 0; i < neutralCount; i++) {
                 randPlayer = playersList[Math.floor(Math.random() * playersList.length)];
                 playersList = playersList.filter(v => v !== randPlayer);
@@ -179,6 +180,7 @@ module.exports = {
                     .setColor("#1984ff")
                     .setTitle(`You are the **${player.role}**`)
                     .setDescription(gamedata[`${player.align.toLowerCase()}Roles`][player.role].description)
+                    .addField("Goal", gamedata[`${player.align.toLowerCase()}Roles`][player.role].goal)
                     .attachFiles([`images/${player.role.toLowerCase()}.png`])
                     .setImage(`attachment://${player.role.toLowerCase()}.png`);
                 gamedata.players.set(randPlayer, player);
@@ -204,6 +206,14 @@ module.exports = {
                             SPEAK: true,
                         });
                     }
+                    let botUser = await message.guild.members.fetch(gamedata.botid);
+                    await message.guild.channels.resolve(id.id).updateOverwrite(botUser, {
+                        SPEAK: true,
+                    });
+                    let spectatorUser = await message.guild.members.fetch(gamedata.spectatorbotid);
+                    await message.guild.channels.resolve(id.id).updateOverwrite(spectatorUser, {
+                        SPEAK: true,
+                    });
                 }).then(() => {
                     message.guild.channels.create("Ghosts of Mafiaville", {
                         type: 'voice',
@@ -215,6 +225,14 @@ module.exports = {
                             permsForGhost.push({
                                 id: player.id,
                                 deny: ['VIEW_CHANNEL']
+                            })
+                            permsForGhost.push({
+                                id: gamedata.botid,
+                                allow: ["VIEW_CHANNEL"],
+                            });
+                            permsForGhost.push({
+                                id: gamedata.spectatorbotid,
+                                allow: ["VIEW_CHANNEL"],
                             })
                         }
                         ghostChannel.overwritePermissions(permsForGhost);
@@ -230,6 +248,14 @@ module.exports = {
                             permsForGhost.push({
                                 id: player.id,
                                 deny: ['VIEW_CHANNEL']
+                            });
+                            permsForGhost.push({
+                                id: gamedata.botid,
+                                allow: ["VIEW_CHANNEL"],
+                            });
+                            permsForGhost.push({
+                                id: gamedata.spectatorbotid,
+                                allow: ["VIEW_CHANNEL"],
                             })
                         }
                         ghostChat.overwritePermissions(permsForGhost);
@@ -241,6 +267,12 @@ module.exports = {
                         permissionOverwrites: [{
                             id: message.guild.roles.everyone,
                             deny: ["VIEW_CHANNEL"],
+                        }, {
+                            id: gamedata.botid,
+                            allow: ["VIEW_CHANNEL"],
+                        }, {
+                            id: gamedata.spectatorbotid,
+                            allow: ["VIEW_CHANNEL"],
                         }],
                     }).then(async (id) => {
                         gamedata.settings.set("mafiaHouse", id.id);
@@ -254,7 +286,7 @@ module.exports = {
                                 });
                             });
                             if (player.align !== "Mafia" || gamedata.settings.get("mafiaHidden")) {
-                                message.guild.channels.create(player.role === "Mayor" ? "Mayor's Residence" : player.username + "'s Home", {
+                                message.guild.channels.create(player.role === "Mayor" ? "Mayor's Residence" : player.role === "Jailer" ? "Mafiaville Jail" : player.username + "'s Home", {
                                     type: "voice",
                                     parent: category,
                                     permissionOverwrites: [{
@@ -263,11 +295,20 @@ module.exports = {
                                     }, {
                                         id: player.id,
                                         allow: ["VIEW_CHANNEL"],
+                                    }, {
+                                        id: gamedata.botid,
+                                        allow: ["VIEW_CHANNEL"],
+                                    }, {
+                                        id: gamedata.spectatorbotid,
+                                        allow: ["VIEW_CHANNEL"],
                                     }],
                                 }).then(async (id) => {
                                     let temp = gamedata.players.get(tag);
                                     temp.vc = id.id;
                                     gamedata.players.set(tag, temp);
+                                    if (player.role === "Jailer") {
+                                        gamedata.settings.set("jailChannel", id.id);
+                                    }
                                 });
                             } else {
                                 let user = await message.guild.members.fetch(player.id);
@@ -278,9 +319,17 @@ module.exports = {
                                     temp.vc = id.id;
                                     gamedata.players.set(tag, temp);
                                 });
+                                let botuser = await message.guild.members.fetch(gamedata.botid);
+                                message.guild.channels.resolve(gamedata.settings.get("mafiaHouse")).updateOverwrite(botuser, {
+                                    VIEW_CHANNEL: true,
+                                })
+                                let spectatorbot = await message.guild.members.fetch(gamedata.spectatorbotid);
+                                message.guild.channels.resolve(gamedata.settings.get("mafiaHouse")).updateOverwrite(spectatorbot, {
+                                    VIEW_CHANNEL: true,
+                                })
                             }
                         }
-                        message.guild.channels.create("The Mafiaville Mafia", {
+                        message.guild.channels.create("Mafiaville Town Hall", {
                             type: "text",
                             parent: category,
                             permissionOverwrites: [{
@@ -288,7 +337,13 @@ module.exports = {
                                 allow: ["VIEW_CHANNEL"],
                             }, {
                                 id: message.guild.roles.everyone,
-                                deny: ["SEND_MESSAGES", "SEND_TTS_MESSAGES", "ADD_REACTIONS"],
+                                deny: ["SEND_MESSAGES", "ADD_REACTIONS"],
+                            }, {
+                                id: gamedata.botid,
+                                allow: ["SEND_MESSAGES", "ADD_REACTIONS"],
+                            }, {
+                                id: gamedata.spectatorbotid,
+                                allow: ["SEND_MESSAGES", "ADD_REACTIONS"],
                             }],
                         }).then(async (id) => {
                             gamedata.settings.set("textChannel", id.id);
@@ -296,7 +351,6 @@ module.exports = {
                                 let user = await message.guild.members.fetch(player.id);
                                 await message.guild.channels.resolve(id).updateOverwrite(user, {
                                     SEND_MESSAGES: true,
-                                    SEND_TTS_MESSAGES: true,
                                     ADD_REACTIONS: true,
                                 });
                             }
@@ -307,6 +361,7 @@ module.exports = {
             });
         }
         let village = createVillage();
+
         if (!village) {
             gamedata.gameReady = true;
         }

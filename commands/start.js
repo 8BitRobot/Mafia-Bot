@@ -197,6 +197,7 @@ module.exports = {
                                             .setDescription("Here were the votes:")
                                             .addField("Guilty", yays, true)
                                             .addField("Innocent", nays, true);
+                                        let member = await message.guild.members.fetch(gamedata.players.get(nominee).id);
                                         await message.guild.channels.resolve(gamedata.settings.get("textChannel")).updateOverwrite(member, {
                                             SEND_MESSAGES: false,
                                             SEND_TTS_MESSAGES: false,
@@ -240,6 +241,9 @@ module.exports = {
             return new Promise((resolve) => {
                 let neutralWinChecks = [];
                 for (let i of gamedata.neutralRoles.players) {
+                    // console.log(i);
+                    // console.log(gamedata.players.get(i))
+                    // console.log(gamedata.neutralRoles);
                     neutralWinChecks.push(gamedata.neutralRoles[gamedata.players.get(i).role].win(message.guild, i, dead, afterVote))
                 }
                 Promise.all(neutralWinChecks).then((results) => {
@@ -284,6 +288,10 @@ module.exports = {
                 for (let member of users) {
                     let user = gamedata.userids.get(member.id);
                     let temp = gamedata.players.get(user);
+                    if (temp.role === "Jailer") {
+                        console.log(member)
+                        gamedata.villageRoles["Jailer"].prompt(member);
+                    }
                     temp.wasFramed = false;
                     if (temp.silencedThisRound) {
                         await gamedata.mafiaRoles["Silencer"].silence(message.guild, member.id);
@@ -322,6 +330,7 @@ module.exports = {
                 await message.guild.channels.resolve(gamedata.settings.get("townHall")).join().then(async (con) => {
                     gamedata.voiceConnection = con;
                     for (let member of Array.from(gamedata.voiceConnection.channel.members.values())) {
+                        console.log(member);
                         if (!member.user.bot) {
                             let temp = gamedata.players.get(member.user.tag);
                             if (temp && temp.isAlive) {
@@ -349,6 +358,16 @@ module.exports = {
                     } else if (!gamedata.players.get(member.user.tag).isAlive) {
                         await member.voice.setChannel(gamedata.settings.get("ghostTown")).catch(() => {});
                     } else {
+                        if (member.user.tag === gamedata.villageRoles["Jailer"].previousSelection) {
+                            await message.guild.channels.resolve(gamedata.settings.get("jailChannel")).updateOverwrite(member, {
+                                VIEW_CHANNEL: false,
+                                SPEAK: false
+                            });
+                            await message.guild.channels.resolve(gamedata.settings.get("townHall")).updateOverwrite(member, {
+                                VIEW_CHANNEL: true,
+                                SPEAK: true
+                            });
+                        }
                         await member.voice.setChannel(gamedata.settings.get("townHall")).catch(() => {
                             channel.send(`**${player.username}** could not be moved to the **Town Hall Meeting**, please join manually.`);
                         });
@@ -510,6 +529,33 @@ module.exports = {
                                 });
                             }
                             break;
+                        case "Baiter":
+                            let getExecutedMsg = new Discord.MessageEmbed()
+                                .setColor("#1984ff")
+                                .setTitle(`${player.username} was jailed last night and was executed!`)
+                                .setDescription(`The town falls silent as the jailer takes matters to his own hands.`)
+                                .attachFiles(["images/death.png"])
+                                .setThumbnail("attachment://death.png");
+                            await channel.send(getExecutedMsg);
+                            await sleepAsync(2000);
+                            if (!player.silencedLastRound && player.will.length !== 0) {
+                                will = new Discord.MessageEmbed()
+                                    .setColor("#cccccc")
+                                    .setTitle(`${player.username}'s last will.`)
+                                    .setDescription(player.will.map(i => `\t${i[0]}.\t${i[1]}`).join("\n"));
+                                await channel.send(will);
+                                await sleepAsync(2000);
+                            } else if (player.will.length !== 0) {
+                                let suppressedWill = new Discord.MessageEmbed()
+                                    .setColor("#d50000")
+                                    .setTitle("Unfortunately, you were killed while being silenced. Your will was suppressed, and it won't be revealed for this entire game.")
+                                    .attachFiles(["images/death.png"])
+                                    .setThumbnail("attachment://death.png");
+                                message.guild.members.fetch(player.id).then((user) => {
+                                    user.send(suppressedWill);
+                                });
+                            }
+                            break;
                     }
                 }
                 checkWin("none", false).then((winResult) => {
@@ -592,7 +638,7 @@ module.exports = {
 
                     let orderOfActions = [
                         ["Distractor", "Village"],
-                        // ["Jailer", "Village"],
+                        ["Jailer", "Village"],
                         ["Framer", "Mafia"],
                         ["Silencer", "Mafia"],
                         ["Godfather", "Mafia"],
@@ -632,6 +678,10 @@ module.exports = {
                         }
                         let deadPerson;
                         let temp;
+
+                        if (gamedata.villageRoles["Jailer"].lastSelection === tag) continue;
+                        if (action.choice && gamedata.villageRoles["Jailer"].lastSelection === action.choice) continue;
+
                         switch (action.action) {
                             case "distract":
                                 temp = gamedata.players.get(action.choice);
@@ -938,11 +988,33 @@ module.exports = {
                                     .setThumbnail("attachment://death.png");
                                 message.guild.members.fetch(gamedata.players.get(tag).id).then((user) => {
                                     user.send(baitedMessage);
-                                })
+                                });
+                                break;
+                            case "execute":
+                                gamedata.game.game.deadThisRound.push({
+                                    name: action.choice,
+                                    by: "Jailer",
+                                });
+                                temp = gamedata.players.get(action.choice);
+                                temp.isAlive = false;
+                                gamedata.players.set(action.choice, temp);
+                                gamedata.game.game.playersAlive = gamedata.game.game.playersAlive.filter(t => t !== action.choice);
+                                let executedMsg = new Discord.MessageEmbed()
+                                    .setColor("#d50000")
+                                    .setTitle("Unfortunately, you were executed by the Jailer!")
+                                    .setDescription("Now that you are dead you can spectate the rest of the game, but you can no longer speak or perform any nightly actions. Please refrain from communicating with living players via video or DMs.")
+                                    .attachFiles(["images/death.png"])
+                                    .setThumbnail("attachment://death.png");
+                                message.guild.members.fetch(gamedata.players.get(action.choice).id).then((user) => {
+                                    user.send(executedMsg);
+                                });
+                                if (temp.align === "Village") {
+                                    gamedata.villageRoles["Jailer"].killsLeft = 0;
+                                }
                                 break;
                             default:
-                                console.log(action.action);
-                                console.log(role);
+                                // console.log(action.action);
+                                // console.log(role);
                                 break;
                         }
                     }
@@ -958,6 +1030,7 @@ module.exports = {
                 await message.guild.channels.resolve(gamedata.settings.get("mafiaHouse")).join().then(async (con) => {
                     gamedata.voiceConnection = con;
                     for (let member of Array.from(gamedata.voiceConnection.channel.members.values())) {
+                        console.log(member);
                         if (!member.user.bot) {
                             let temp = gamedata.players.get(member.user.tag);
                             if (temp && temp.isAlive) {
@@ -976,9 +1049,29 @@ module.exports = {
                     }
                 });
                 for (let member of users) {
-                    if (gamedata.players.get(member.user.tag).isAlive) {
-                        member.voice.setChannel(gamedata.players.get(gamedata.userids.get(member.id)).vc).catch(() => {
-                            channel.send(`**${gamedata.players.get(gamedata.userids.get(member.id)).username}** could not be moved to **their home**, please join manually.`);
+                    if (gamedata.players.get(member.user.tag).isAlive && gamedata.villageRoles["Jailer"].lastSelection !== member.user.tag) {
+                        await message.guild.channels.resolve(gamedata.players.get(member.user.tag).vc).updateOverwrite(member, {
+                            VIEW_CHANNEL: true,
+                            SPEAK: true
+                        });
+                        await member.voice.setChannel(gamedata.players.get(member.user.tag).vc).catch(() => {
+                            channel.send(`**${gamedata.players.get(gamedata.userids.get(member.id)).username}** could not be moved to **their channel**, please join manually.`);
+                        });
+                    } else if (gamedata.players.get(member.user.tag).isAlive && gamedata.villageRoles["Jailer"].lastSelection === member.user.tag) {
+                        await message.guild.channels.resolve(gamedata.settings.get("townHall")).updateOverwrite(member, {
+                            VIEW_CHANNEL: false,
+                            SPEAK: false
+                        });
+                        await message.guild.channels.resolve(gamedata.players.get(member.user.tag).vc).updateOverwrite(member, {
+                            VIEW_CHANNEL: false,
+                            SPEAK: false
+                        });
+                        await message.guild.channels.resolve(gamedata.settings.get("jailChannel")).updateOverwrite(member, {
+                            VIEW_CHANNEL: true,
+                            SPEAK: true
+                        });
+                        await member.voice.setChannel(gamedata.settings.get("jailChannel")).catch(() => {
+                            channel.send(`**${gamedata.players.get(gamedata.userids.get(member.id)).username}** could not be moved to **their channel**, please join manually.`);
                         });
                     }
                 }

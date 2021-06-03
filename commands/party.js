@@ -18,7 +18,7 @@ module.exports = {
             .setColor("#2196F3")
             .setTitle(`There ${playerCount === 1 ? "is" : "are"} currently ${playerCount} player${playerCount === 1 ? "" : "s"} in the party.`)
             .addField("Players:", playerList, true)
-            .addField("Gamemode:", `**${gamedata.settings.get("gamemode") ? gamedata.settings.get("gamemode"): "unset"}**`, true)
+            // .addField("Gamemode:", `**${gamedata.settings.get("gamemode") ? gamedata.settings.get("gamemode"): "unset"}**`, true)
             .setFooter("Use m.setup to assign roles!");
 
         message.channel.send(partyEmbed);
