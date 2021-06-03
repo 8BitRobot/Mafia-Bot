@@ -31,6 +31,8 @@ const prefix = "m.";
 class GameData {
     constructor(playersFromLastRound) {
         this.players = playersFromLastRound ?? new Map();
+        this.botid = undefined;
+        this.spectatorbotid = undefined;
         this.userids = new Map();
         this.settings = new Map();
         this.gameActive = false;
@@ -868,9 +870,6 @@ class GameData {
                                     user.send(noActionMessage);
                                     resolve("");
                                 } else {
-                                    console.log(emoji);
-                                    console.log(typeof emoji);
-                                    console.log(emoji.first(2));
                                     let selections = [];
                                     for (let e of emoji.first(2)) {
                                         // console.log(e);
@@ -981,12 +980,12 @@ class GameData {
         this.neutralRoles = {
             players: [],
             tiers: {
-                2: {
-                    roles: ["Jester", "Executioner", "Arsonist"], // TODO: switch tier 1 and 2, remove "Arsonist"
+                1: {
+                    roles: ["Executioner"], // TODO add jester
                     pick: 1,
                 },
-                1: {
-                    roles: ["Baiter"], // TODO: switch 1 & 2, add "Arsonist"
+                2: {
+                    roles: ["Baiter", "Arsonist"],
                     pick: 1,
                 },
                 3: {
@@ -1298,6 +1297,7 @@ spectatorClient.login(spectatorConfig.token);
 
 client.once("ready", () => {
     console.log("Ready!");
+    gamedata.botid = client.user.id;
 });
 
 const EventEmitter = require("events");
@@ -1308,35 +1308,40 @@ class MyEmitter extends EventEmitter {}
 const emit = new MyEmitter();
 gamedata.settings.set("emit", emit);
 
+// emit.setMaxListeners(0);
+
 spectatorClient.once("ready", () => {
     console.log("Spectator ready!");
-    let connection;
-    emit.on("ghost town", async (channel) => {
-        let vchannel;
-        console.log("Ghost town created!");
-        console.log(channel);
-        vchannel = spectatorClient.channels.resolve(channel.id);
-        console.log(channel);
-        try {
+    gamedata.spectatorbotid = spectatorClient.user.id;
+});
+
+let connection;
+emit.on("ghost town", async (channel) => {
+    let vchannel;
+    console.log("Ghost town created!");
+    // console.log(channel);
+    vchannel = spectatorClient.channels.resolve(channel.id);
+    // console.log(channel);
+    try {
+        vchannel.join().then((con) => {
+            connection = con;
+        });
+    } catch (e) {
+        console.log("Error, trying again.");
+        setTimeout(() => {
+            vchannel = spectatorClient.channels.resolve(channel.id);
             vchannel.join().then((con) => {
                 connection = con;
             });
-        } catch (e) {
-            console.log("Error, trying again.");
-            setTimeout(() => {
-                vchannel = spectatorClient.channels.resolve(channel.id);
-                vchannel.join().then((con) => {
-                    connection = con;
-                });
-            }, 2000);
-        }
-    });
-    emit.on("stream", (mixedStream) => {
-        var pass = stream.PassThrough()
-        mixedStream.pipe(pass);
-        connection.play(pass, {
-            type: "converted"
-        });
+        }, 2000);
+    }
+
+});
+emit.on("stream", (mixedStream) => {
+    var pass = stream.PassThrough()
+    mixedStream.pipe(pass);
+    connection.play(pass, {
+        type: "converted"
     });
 });
 
@@ -1350,12 +1355,24 @@ for (const file of commandFiles) {
 }
 
 client.on("voiceStateUpdate", (oldState, newState) => {
+    // player moves to a different channel --> update current channel in gamedata
     if (gamedata.players.get(newState.member.user.tag) && !newState.member.user.bot && oldState.channelID !== newState.channelID) {
         let temp = gamedata.players.get(newState.member.user.tag);
         temp.currentChannel = newState.channelID;
         gamedata.players.set(newState.member.user.tag, temp);
+        // ADDING NEW CODE BELOW
+        console.log(`${newState.member.user.tag} moved from ${oldState.channel.name} to ${newState.channel.name}, clearing any inputs.`);
+        temp = gamedata.players.get(newState.member.user.tag);
+        if (temp.mixerInput) {
+            temp.mixerInput = undefined;
+            gamedata.mixer.removeInput(gamedata.players.get(newState.member.user.tag).mixerInput)
+            gamedata.players.set(newState.member.user.tag, temp);
+        }
     }
+    // bot moves to a different channel --> create a new audiomixer in gamedata
     if (newState.member.user.bot && oldState.channelID !== newState.channelID) {
+        console.log();
+        console.log(`${newState.member.user.tag} moved from ${oldState.channel ? oldState.channel.name : "thin air"} to ${newState.channel ? newState.channel.name : "thin air"}, creating new audiomixer.`);
         gamedata.mixer = new AudioMixer.Mixer({
             channels: 2,
             bitDepth: 16,
@@ -1363,6 +1380,7 @@ client.on("voiceStateUpdate", (oldState, newState) => {
             clearInterval: 1000
         });
     }
+    // a player moves to a channel that the bot is currently in --> create a new mixerinput for that player
     if (!newState.member.user.bot && gamedata.voiceConnection && gamedata.voiceConnection.channel.id === newState.channelID && gamedata.voiceConnection.channel.id !== oldState.channelID && gamedata.game.game.playersAlive.includes(newState.member.user.tag)) {
         let temp = gamedata.players.get(newState.member.user.tag);
         temp.mixerInput = gamedata.mixer.input({
@@ -1371,19 +1389,22 @@ client.on("voiceStateUpdate", (oldState, newState) => {
             bitDepth: 16
         });
         gamedata.players.set(newState.member.user.tag, temp);
+        console.log(`Creating a new mixer for ${newState.member.user.tag} since user joined ${newState.channel.name} which the bot is currently in.`)
         gamedata.voiceConnection.receiver.createStream(newState.member.user.id, {
             end: "manual",
             mode: "pcm"
         }).pipe(gamedata.players.get(newState.member.user.tag).mixerInput)
     }
-    if (!newState.member.user.bot && gamedata.voiceConnection && gamedata.voiceConnection.channel.id === oldState.channelID && gamedata.voiceConnection.channel.id !== newState.channelID && gamedata.players.get(newState.member.user.tag)) {
-        let temp = gamedata.players.get(newState.member.user.tag);
-        if (temp.mixerInput) {
-            temp.mixerInput = undefined;
-            gamedata.mixer.removeInput(gamedata.players.get(newState.member.user.tag).mixerInput)
-            gamedata.players.set(newState.member.user.tag, temp);
-        }
-    }
+    // a player leaves the channel that the bot is in --> remove the mixerinput for that player
+    // if (!newState.member.user.bot && gamedata.voiceConnection && gamedata.voiceConnection.channel.id === oldState.channelID && gamedata.voiceConnection.channel.id !== newState.channelID && gamedata.players.get(newState.member.user.tag)) {
+    //     console.log(`${newState.member.user.tag} moved from ${oldState.channel.name} to ${newState.channel.name}`);
+    //     let temp = gamedata.players.get(newState.member.user.tag);
+    //     if (temp.mixerInput) {
+    //         temp.mixerInput = undefined;
+    //         gamedata.mixer.removeInput(gamedata.players.get(newState.member.user.tag).mixerInput)
+    //         gamedata.players.set(newState.member.user.tag, temp);
+    //     }
+    // }
 })
 
 client.on("message", (message) => {
