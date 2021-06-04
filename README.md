@@ -52,7 +52,7 @@ Runs the game.
 
 Each "night," the bot moves all players to their own homes. Then, it sends a DM to all active players to prompt them for their actions. Nightly actions include the Godfather killing, the Detective investigating another player, and so on. Then, the bot combines all the choices and determines the outcome of those choices, i.e. who has been killed that night and what other information can be revealed.
 
-Each "day," the bot moves all players to the Town Hall (barring those killed or blocked by the Silencer role). Then, it releases the results from that night and allows the players to vote for one person whom they believe to be the Mafia. Players are given roughly 40 seconds to discuss before a decision must be made. If a person is nominated, the bot gives them 20 seconds to defend themselves before a final vote is taken. If the town votes to convict them, they are "lynched," or killed (and moved to the channel for the dead players).
+Each "day," the bot moves all players to the Town Hall (barring those killed or blocked by the Silencer role). Then, it releases the results from that night and allows the players to vote for one person whom they believe to be the Mafia. Players are given roughly 40 seconds to discuss before a decision must be made. If a person is nominated, the bot gives them 20 seconds to defend themselves before a final vote is taken. If the town votes to convict them, they are executed (and moved to the channel for the dead players).
 
 multiple images
 
