@@ -1,7 +1,7 @@
 const Discord = require("discord.js");
 module.exports = {
     name: "setmode",
-    description: "",
+    description: "(Experimental) Set the game mode.",
     execute(message, args, gamedata, spectatorClient) {
         if (message.channel.type === "dm") {
             message.channel.send("You need to be in a **guild** to set the game mode.");

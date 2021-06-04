@@ -1,7 +1,7 @@
 const Discord = require("discord.js");
 module.exports = {
     name: "party",
-    description: "",
+    description: "List all members of the party.",
     execute(message, args, gamedata, spectatorClient) {
         var playerList = "";
         

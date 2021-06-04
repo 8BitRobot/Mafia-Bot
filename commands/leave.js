@@ -1,6 +1,6 @@
 module.exports = {
     name: "leave",
-    description: "",
+    description: "Leave the active party.",
     execute(message, args, gamedata, spectatorClient) {
         if (message.channel.type === "dm") {
             message.channel.send("This command is not allowed to be used here!")

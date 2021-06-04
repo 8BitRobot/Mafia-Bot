@@ -1,6 +1,6 @@
 module.exports = {
     name: "66",
-    description: "",
+    description: "_Execute Order 66_ by automatically deleting every channel the bot created.",
     async execute(message, args, gamedata, spectatorClient) {
         try {
             if (message.channel.type === "dm") {
@@ -26,7 +26,7 @@ module.exports = {
             gamedata.gameReady = false;
             message.channel.send("Done.");
         } catch (e) {
-            console.error(e);
+            console.log("please");
         }
     },
 };

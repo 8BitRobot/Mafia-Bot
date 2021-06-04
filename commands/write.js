@@ -1,7 +1,7 @@
 const Discord = require("discord.js");
 module.exports = {
     name: "write",
-    description: "",
+    description: "Add a line to the will.",
     execute(message, args, gamedata) {
         if (gamedata.players.has(message.author.tag)) {
             let player = gamedata.players.get(message.author.tag);

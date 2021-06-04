@@ -1,7 +1,7 @@
 const Discord = require("discord.js");
 module.exports = {
     name: "join",
-    description: "",
+    description: "Join a party for the next game, or create one if nobody has joined yet.",
     execute(message, args, gamedata) {
         if (gamedata.players.has(message.author.tag)) {
             message.channel.send(`**${message.author.username}** is already in the party.`);

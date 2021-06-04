@@ -103,11 +103,11 @@ class GameData {
             },
             tiers: {
                 1: {
-                    roles: ["Godfather"],
+                    roles: ["Silencer"],
                     pick: false,
                 },
                 2: {
-                    roles: ["Framer", "Silencer"],
+                    roles: ["Framer", "Godfather"], // TODO switch Godfather and Silencer
                     pick: false,
                 },
                 3: {
@@ -454,7 +454,7 @@ class GameData {
                     pick: false,
                 },
                 3: {
-                    roles: ["Distractor"], // TODO add Jailer
+                    roles: ["Distractor", "Jailer"],
                     pick: 1,
                 },
                 4: {
@@ -845,9 +845,10 @@ class GameData {
                                             that.revealed = true;
                                             gamedata.game.game.mayor = user.id;
                                             user.send(selectionMessage);
+                                            console.log(that.lastSelection)
                                             resolve({
                                                 action: "execute",
-                                                choice: this.players.get(that.lastSelection)
+                                                choice: that.lastSelection
                                             });
                                         } else {
                                             selectionMessage = new Discord.MessageEmbed()
@@ -859,8 +860,9 @@ class GameData {
                                     }
                                 })
                             })
+                        } else {
+                            resolve({});
                         }
-                        resolve({});
                     });
                 },
             },
@@ -1217,10 +1219,11 @@ class GameData {
             },
             "Eternal": {
                 align: "Neutral",
-                description: "",
+                description: "Once an apprentice of the town's distractor, you have mastered the art of potions and dark magic and use it to your own benefit. Your ability activates when you are killed at night, when your spirits are transfered to a victim of your choosing.",
+                goal: "Transfer your spirits to a victim, and win the game as their role.",
                 newAlign: "",
                 prompt: (user) => {
-                    user.send("bruh");
+                    
                 },
                 night: (user) => {
                     return new Promise((resolve) => {

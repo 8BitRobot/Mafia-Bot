@@ -1,7 +1,7 @@
 const Discord = require("discord.js");
 module.exports = {
     name: "erase",
-    description: "",
+    description: "Erase a line from your will.",
     execute(message, args, gamedata) {
         if (gamedata.players.has(message.author.tag)) {
             let player = gamedata.players.get(message.author.tag);

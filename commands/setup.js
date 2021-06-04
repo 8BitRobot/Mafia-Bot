@@ -2,7 +2,7 @@ const Discord = require("discord.js");
 
 module.exports = {
     name: "setup",
-    description: "",
+    description: "Set up a new game by assigning a role to every member of the party.",
     async execute(message, args, gamedata, spectatorClient) {
         if (message.channel.type === "dm") {
             message.channel.send("You need to be in a **guild** to set up a game.")
