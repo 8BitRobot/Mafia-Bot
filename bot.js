@@ -754,9 +754,7 @@ class GameData {
                 previousSelection: undefined,
                 prompt: (user) => {
                     let that = this.villageRoles["Jailer"]
-                    console.log("in jailer prompt function")
                     if (that.canJail) {
-                        console.log("creating jailer message")
                         let i = 0;
                         let jailerMsg = new Discord.MessageEmbed()
                             .setColor("#1e8c00")
@@ -845,7 +843,6 @@ class GameData {
                                             that.revealed = true;
                                             gamedata.game.game.mayor = user.id;
                                             user.send(selectionMessage);
-                                            console.log(that.lastSelection)
                                             resolve({
                                                 action: "execute",
                                                 choice: that.lastSelection
@@ -994,7 +991,6 @@ class GameData {
                                 } else {
                                     let selections = [];
                                     for (let e of emoji.first(2)) {
-                                        // console.log(e);
                                         let reaction = e.emoji.name;
                                         let selection = that.emojiMap.get(reaction);
                                         selections.push(selection);
@@ -1447,9 +1443,7 @@ let connection;
 emit.on("ghost town", async (channel) => {
     let vchannel;
     console.log("Ghost town created!");
-    // console.log(channel);
     vchannel = spectatorClient.channels.resolve(channel.id);
-    // console.log(channel);
     try {
         vchannel.join().then((con) => {
             connection = con;
@@ -1488,8 +1482,6 @@ client.on("voiceStateUpdate", (oldState, newState) => {
         let temp = gamedata.players.get(newState.member.user.tag);
         temp.currentChannel = newState.channelID;
         gamedata.players.set(newState.member.user.tag, temp);
-        // ADDING NEW CODE BELOW
-        // console.log(`${newState.member.user.tag} moved from ${oldState.channel.name} to ${newState.channel.name}, clearing any inputs.`);
         temp = gamedata.players.get(newState.member.user.tag);
         if (temp.mixerInput) {
             temp.mixerInput = undefined;
@@ -1499,8 +1491,6 @@ client.on("voiceStateUpdate", (oldState, newState) => {
     }
     // bot moves to a different channel --> create a new audiomixer in gamedata
     if (newState.member.user.bot && oldState.channelID !== newState.channelID) {
-        // console.log();
-        // console.log(`${newState.member.user.tag} moved from ${oldState.channel ? oldState.channel.name : "thin air"} to ${newState.channel ? newState.channel.name : "thin air"}, creating new audiomixer.`);
         gamedata.mixer = new AudioMixer.Mixer({
             channels: 2,
             bitDepth: 16,
@@ -1517,7 +1507,6 @@ client.on("voiceStateUpdate", (oldState, newState) => {
             bitDepth: 16
         });
         gamedata.players.set(newState.member.user.tag, temp);
-        // console.log(`Creating a new mixer for ${newState.member.user.tag} since user joined ${newState.channel.name} which the bot is currently in.`)
         let channelStream = gamedata.voiceConnection.receiver.createStream(newState.member.user.id, {
             end: "manual",
             mode: "pcm"
@@ -1526,7 +1515,6 @@ client.on("voiceStateUpdate", (oldState, newState) => {
     }
     // a player leaves the channel that the bot is in --> remove the mixerinput for that player
     // if (!newState.member.user.bot && gamedata.voiceConnection && gamedata.voiceConnection.channel.id === oldState.channelID && gamedata.voiceConnection.channel.id !== newState.channelID && gamedata.players.get(newState.member.user.tag)) {
-    //     console.log(`${newState.member.user.tag} moved from ${oldState.channel.name} to ${newState.channel.name}`);
     //     let temp = gamedata.players.get(newState.member.user.tag);
     //     if (temp.mixerInput) {
     //         temp.mixerInput = undefined;

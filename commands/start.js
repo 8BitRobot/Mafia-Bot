@@ -40,7 +40,6 @@ module.exports = {
                 nonmafia++;
             }
             let member = await message.guild.members.fetch(player.id);
-            console.log(member);
             users.push(member);
             searchableUsers[player.id] = member;
         }
@@ -67,7 +66,7 @@ module.exports = {
                     nominateMsg.addField(`${gamedata.emojiArray[i]} ${player}`, "\u200B", false);
                     i++;
                 }
-                nominateMsg.setFooter(`Use the emojis below to vote on whom to nominate! (You need ${Math.ceil(gamedata.game.game.playersAlive.length / 2.4)} votes to nominate someone)`);
+                nominateMsg.setFooter(`Use the emojis below to vote on whom to nominate! (You need ${Math.ceil(gamedata.game.game.playersAlive.length / 2.4)} votes to nominate someone.)`);
                 channel.send({
                     files: ["images/voting.png"],
                     embed: nominateMsg
@@ -249,9 +248,6 @@ module.exports = {
             return new Promise((resolve) => {
                 let neutralWinChecks = [];
                 for (let i of gamedata.neutralRoles.players) {
-                    // console.log(i);
-                    // console.log(gamedata.players.get(i))
-                    // console.log(gamedata.neutralRoles);
                     neutralWinChecks.push(gamedata.neutralRoles[gamedata.players.get(i).role].win(message.guild, i, dead, afterVote))
                 }
                 Promise.all(neutralWinChecks).then((results) => {
@@ -304,7 +300,6 @@ module.exports = {
                     let user = gamedata.userids.get(member.id);
                     let temp = gamedata.players.get(user);
                     if (temp.role === "Jailer") {
-                        console.log(member)
                         gamedata.villageRoles["Jailer"].prompt(member);
                     }
                     temp.wasFramed = false;
@@ -318,7 +313,7 @@ module.exports = {
                     }
                     gamedata.players.set(user, temp);
                 }
-                let deaths = gamedata.game.game.deadThisRound.filter(death => ["Mafia", "Silencer", "Vigilante", "Arsonist", "Baiter", "Jailer"].includes(death.by))
+                let deaths = gamedata.game.game.deadThisRound.filter(death => ["Mafia", "Vigilante", "Arsonist", "Baiter", "Jailer"].includes(death.by))
                 let deathPermissionUpdates = [];
 
                 for (let death of deaths) {
@@ -425,7 +420,6 @@ module.exports = {
                 await townHall.join().then(async (con) => {
                     gamedata.voiceConnection = con;
                     for (let member of Array.from(gamedata.voiceConnection.channel.members.values())) {
-                        console.log(member);
                         if (!member.user.bot) {
                             let temp = gamedata.players.get(member.user.tag);
                             if (temp && temp.isAlive) {
@@ -729,7 +723,6 @@ module.exports = {
                         continue;
                     }
                     promises.push(gamedata[`${player.align.toLowerCase()}Roles`][player.role].night(user).then((result) => {
-                        if (player.role === "Jailer") console.log(result)
                         roundByRole.set(player.role, [result, tag]);
                     }));
                     i++;
@@ -1166,8 +1159,6 @@ module.exports = {
                                 }
                                 break;
                             default:
-                                // console.log(action.action);
-                                // console.log(role);
                                 break;
                         }
                     }
@@ -1179,11 +1170,10 @@ module.exports = {
         function nightTime(round) {
             return new Promise(async (resolve) => {
                 await sleepAsync(5000)
-                console.log("night time");
+                console.log("Night time!");
                 await mafiaHouse.join().then(async (con) => {
                     gamedata.voiceConnection = con;
                     for (let member of Array.from(gamedata.voiceConnection.channel.members.values())) {
-                        console.log(member);
                         if (!member.user.bot) {
                             let temp = gamedata.players.get(member.user.tag);
                             if (temp && temp.isAlive) {
@@ -1240,10 +1230,22 @@ module.exports = {
                         resolve();
                     });
                 });
-
             });
         }
+
+        let searchablePregameVCs = {};
+
+        for (let [tag, player] of gamedata.players) {
+            let member = searchableUsers[player.id];
+            player.pregameVC = member.voice.channelID;
+            if (!Object.keys(searchablePregameVCs).includes(member.voice.channelID)) {
+                searchablePregameVCs[member.voice.channelID] = message.guild.channels.resolve(member.voice.channelID);
+            }
+            gamedata.players.set(tag, player);
+        }
+
         let gameOver;
+        message.channel.send(`The game is starting! Head over to <#${channel.id}> to begin.`);
         channel.send("By playing with the Town of Mafiaville, you agree to allow the bot to record voice activity in select channels for the purpose of live playback during the game.")
         for (let i = 1; nonmafia > mafia; i++) {
             gamedata.game.game.currentRound = i;
@@ -1297,17 +1299,12 @@ module.exports = {
         await sleepAsync(2000);
         channel.send(finalSummary);
 
+        channel.overwritePermissions([]);
+        townHall.overwritePermissions([]);
+
         for (let [tag, player] of gamedata.players) {
             let member = searchableUsers[player.id];
-            member.voice.setChannel(gamedata.settings.get("townHall"));
-            await channel.updateOverwrite(member, {
-                SEND_MESSAGES: true,
-                SEND_TTS_MESSAGES: true,
-                ADD_REACTIONS: true,
-            });
-            await townHall.updateOverwrite(member, {
-                SPEAK: true,
-            });
+            member.voice.setChannel(searchablePregameVCs[player.pregameVC]);
 
             player.role = undefined;
             player.distracted = false;
