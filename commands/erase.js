@@ -14,7 +14,6 @@ module.exports = {
                 message.channel.send("That line doesn't exist in your will.");
             } else {
                 player.will.splice(args[0] - 1, 1);
-                console.log(player.will);
                 for (let i = 0; i < player.will.length; i++) {
                     player.will[i] = [i + 1, player.will[i][1]];
                 }

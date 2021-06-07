@@ -26,7 +26,7 @@ module.exports = {
             gamedata.gameReady = false;
             message.channel.send("Done.");
         } catch (e) {
-            console.log("please");
+            console.log("An error occurred.");
         }
     },
 };
