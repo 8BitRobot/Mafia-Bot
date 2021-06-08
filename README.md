@@ -21,13 +21,13 @@ A Discord Bot to facilitate games of the popular party game Mafia.
 
 Joins the game party or creates one if none is present.
 
-![Join response](https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/join.png?token=AHZVCGOINWNCWZGPA5BV4Y3AY7X66)
+<img src="https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/join.png?token=AHZVCGOINWNCWZGPA5BV4Y3AY7X66" width=500>
 
 ### `m.write`
 
 Creates or adds to a Final Will. The Final Will is text written privately by the player to be revealed on the player's death. Due to the private nature of the information the player may want to reveal, this command can only be used in Direct Messages (DMs).
 
-![Will writing response](https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/write.png?token=AHZVCGOMELPETPQZD3BWRTTAY7YDO)
+<img src="https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/write.png?token=AHZVCGOMELPETPQZD3BWRTTAY7YDO" width=500>
 
 ### `m.erase`
 
@@ -44,7 +44,7 @@ Sets up a new game by:
 
 This command can only be used by the Host, the person who created the party.
 
-![Setup message](https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/setup.png?token=AHZVCGI4U56PGAVX2H32ZO3AY7ZRK)
+<img src="https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/setup.png?token=AHZVCGI4U56PGAVX2H32ZO3AY7ZRK" width=500>
 
 ### `m.start`
 
@@ -54,9 +54,9 @@ Each "night," the bot moves all players to their own homes. Then, it sends a DM 
 
 Each "day," the bot moves all players to the Town Hall (barring those killed or blocked by the Silencer role). Then, it releases the results from that night and allows the players to vote for one person whom they believe to be the Mafia. Players are given roughly 40 seconds to discuss before a decision must be made. If a person is nominated, the bot gives them 20 seconds to defend themselves before a final vote is taken. If the town votes to convict them, they are executed (and moved to the channel for the dead players).
 
-![Nighttime action](https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/night.png?token=AHZVCGND3CSEM37C3WMDMGLAY7YH6)
-![Daytime voting](https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/voting.png?token=AHZVCGINZGA5GGDFIYGT63LAY7YKQ)
-![Game over](https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/endgame.png?token=AHZVCGKJ6A5ANNAV4EKTGVTAY7ZDS)
+<img src="https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/night.png?token=AHZVCGND3CSEM37C3WMDMGLAY7YH6" width=500>
+<img src="https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/voting.png?token=AHZVCGINZGA5GGDFIYGT63LAY7YKQ" width=500>
+<img src="https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/endgame.png?token=AHZVCGKJ6A5ANNAV4EKTGVTAY7ZDS" width=500>
 
 ## Auxiliary Commands
 
@@ -64,7 +64,7 @@ Each "day," the bot moves all players to the Town Hall (barring those killed or 
 
 Lists the members of the current game party.
 
-![Game over](https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/party.png?token=AHZVCGMA2C26S7NWAXSWXXTAY7YNA)
+<img src="https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/party.png?token=AHZVCGMA2C26S7NWAXSWXXTAY7YNA" width=500>
 
 ### `m.leave`
 
@@ -84,6 +84,6 @@ This command can only be used by the Host, the person who created the party.
 
 ## Roles
 
-![roles](https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/gallery.png?token=AHZVCGJAB2MTC5TVHLDYKCTAY7ZF2)
+<img src="https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/gallery.png?token=AHZVCGJAB2MTC5TVHLDYKCTAY7ZF2" width=500>
 
 
