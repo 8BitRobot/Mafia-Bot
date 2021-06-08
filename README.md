@@ -84,6 +84,6 @@ This command can only be used by the Host, the person who created the party.
 
 ## Roles
 
-<img src="https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/gallery.png?token=AHZVCGJAB2MTC5TVHLDYKCTAY7ZF2" width=500>
+<img src="https://raw.githubusercontent.com/8BitRobot/Mafia-Bot/master/readme_screenshots/gallery.png?token=AHZVCGJAB2MTC5TVHLDYKCTAY7ZF2" width=1000>
 
 
